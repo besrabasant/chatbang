@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 	"strings"
@@ -109,9 +108,30 @@ func runPerplexity(userPrompt string) {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Browser interaction completed. Press Enter to exit.")
-	//select {}
-	fmt.Scanln()
+	done := make(chan bool)
+	go func() {
+		ticker := time.NewTicker(200 * time.Second)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ticker.C:
+				// Try to execute a simple JavaScript command to check if browser is still alive
+				err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
+				if err != nil {
+					// Browser is closed or context is invalid
+					done <- true
+					return
+				}
+			case <-ctx.Done():
+				// Context was cancelled
+				done <- true
+				return
+			}
+		}
+	}()
+
+	<-done
 }
 
 func runClaude(userPrompt string) {
@@ -153,9 +173,30 @@ func runClaude(userPrompt string) {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Browser interaction completed. Press Enter to exit.")
-	//select {}
-	fmt.Scanln()
+	done := make(chan bool)
+	go func() {
+		ticker := time.NewTicker(200 * time.Second)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ticker.C:
+				// Try to execute a simple JavaScript command to check if browser is still alive
+				err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
+				if err != nil {
+					// Browser is closed or context is invalid
+					done <- true
+					return
+				}
+			case <-ctx.Done():
+				// Context was cancelled
+				done <- true
+				return
+			}
+		}
+	}()
+
+	<-done
 }
 
 func runChatGPT(userPrompt string) {
@@ -202,7 +243,28 @@ func runChatGPT(userPrompt string) {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Browser interaction completed. Press Enter to exit.")
-	//select {}
-	fmt.Scanln()
+	done := make(chan bool)
+	go func() {
+		ticker := time.NewTicker(200 * time.Second)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ticker.C:
+				// Try to execute a simple JavaScript command to check if browser is still alive
+				err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
+				if err != nil {
+					// Browser is closed or context is invalid
+					done <- true
+					return
+				}
+			case <-ctx.Done():
+				// Context was cancelled
+				done <- true
+				return
+			}
+		}
+	}()
+
+	<-done
 }
