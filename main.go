@@ -17,7 +17,7 @@ import (
 
 func main() {
 	myApp := app.New()
-	myWindow := myApp.NewWindow("Enter Text")
+	myWindow := myApp.NewWindow("Chatbang")
 	
 	myWindow.Resize(fyne.NewSize(400, 120))
 	myWindow.SetFixedSize(true)
@@ -34,7 +34,7 @@ func main() {
 	}
 
 	content := container.NewVBox(
-		widget.NewLabel("Enter text:"),
+		widget.NewLabel("ChatGPT"),
 		textEntry,
 	)
 
@@ -54,6 +54,11 @@ func main() {
 			storedText = strings.TrimSuffix(storedText, "!chatgpt")
 			storedText = strings.TrimRight(storedText, " ")
 			runChatGPT(storedText)
+		} else if (strings.HasSuffix(storedText, "!p")) {
+			// p for perplexity
+			storedText = strings.TrimSuffix(storedText, "!p")
+			storedText = strings.TrimRight(storedText, " ")
+			runPerplexity(storedText)
 		} else {
 			runDefault(storedText)
 		}
@@ -62,6 +67,51 @@ func main() {
 
 func runDefault(userPrompt string) {
 	runChatGPT(userPrompt)
+}
+
+func runPerplexity(userPrompt string) {
+	edgePath := "/usr/bin/microsoft-edge"
+
+	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ExecPath(edgePath),
+			chromedp.Flag("disable-blink-features", "AutomationControlled"),
+			chromedp.Flag("exclude-switches", "enable-automation"),
+			chromedp.Flag("disable-extensions", false),
+			chromedp.UserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+			chromedp.Flag("disable-default-apps", false),
+			chromedp.Flag("disable-dev-shm-usage", false),
+			chromedp.Flag("disable-gpu", false),
+			chromedp.Flag("headless", false),
+			chromedp.UserDataDir("/home/ahmed/config/microsoft-edge"),
+			chromedp.Flag("profile-directory", "Default"),
+			//chromedp.Flag("profile-directory", "Profile 1"),
+		)...,
+	)
+
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocatorCtx)
+	defer cancel()
+
+	taskCtx, taskCancel := context.WithTimeout(ctx, 200*time.Second)
+	defer taskCancel()
+
+	err := chromedp.Run(taskCtx,
+		chromedp.Navigate(`https://www.perplexity.ai/`),
+		chromedp.WaitVisible(`#ask-input`, chromedp.ByID),
+		chromedp.Click(`#ask-input`, chromedp.ByID),
+		chromedp.SendKeys(`#ask-input`, userPrompt, chromedp.ByID),
+		chromedp.WaitVisible(`//button[@aria-label="Submit"]`),
+		chromedp.Click(`//button[@aria-label="Submit"]`),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Browser interaction completed. Press Enter to exit.")
+	//select {}
+	fmt.Scanln()
 }
 
 func runClaude(userPrompt string) {
