@@ -53,6 +53,10 @@ func main() {
 			storedText = strings.TrimSuffix(storedText, "!chatgpt")
 			storedText = strings.TrimRight(storedText, " ")
 			runChatGPT(storedText)
+		} else if (strings.HasSuffix(storedText, "!grok")) {
+			storedText = strings.TrimSuffix(storedText, "!grok")
+			storedText = strings.TrimRight(storedText, " ")
+			runGrok(storedText)
 		} else if (strings.HasSuffix(storedText, "!p")) {
 			// p for perplexity
 			storedText = strings.TrimSuffix(storedText, "!p")
@@ -168,6 +172,68 @@ func runClaude(userPrompt string) {
 		chromedp.Click(`//div[contains(@class, "ProseMirror") and contains(@class, "break-words") and contains(@class, "max-w-[60ch")]`),
 		chromedp.SendKeys(`//div[contains(@class, "ProseMirror") and contains(@class, "break-words") and contains(@class, "max-w-[60ch]") and @contenteditable="true"]`, userPrompt),
 		chromedp.Click(`//button[@aria-label="Send message"]`),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	done := make(chan bool)
+	go func() {
+		ticker := time.NewTicker(200 * time.Second)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ticker.C:
+				err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
+				if err != nil {
+					done <- true
+					return
+				}
+			case <-ctx.Done():
+				done <- true
+				return
+			}
+		}
+	}()
+
+	<-done
+}
+
+func runGrok(userPrompt string) {
+	edgePath := "/usr/bin/microsoft-edge"
+
+	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ExecPath(edgePath),
+			chromedp.Flag("disable-blink-features", "AutomationControlled"),
+			chromedp.Flag("exclude-switches", "enable-automation"),
+			chromedp.Flag("disable-extensions", false),
+			chromedp.UserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+			chromedp.Flag("disable-default-apps", false),
+			chromedp.Flag("disable-dev-shm-usage", false),
+			chromedp.Flag("disable-gpu", false),
+			chromedp.Flag("headless", false),
+			chromedp.UserDataDir("/home/ahmed/config/microsoft-edge"),
+			chromedp.Flag("profile-directory", "Default"),
+			//chromedp.Flag("profile-directory", "Profile 1"),
+		)...,
+	)
+
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocatorCtx)
+	defer cancel()
+
+	taskCtx, taskCancel := context.WithTimeout(ctx, 200*time.Second)
+	defer taskCancel()
+
+	err := chromedp.Run(taskCtx,
+		chromedp.Navigate(`https://grok.com/`),
+		chromedp.WaitVisible(`textarea[aria-label="Ask Grok anything"]`), 
+		chromedp.Click(`textarea[aria-label="Ask Grok anything"]`), 
+		chromedp.SendKeys(`textarea[aria-label="Ask Grok anything"]`, userPrompt),
+		chromedp.Click(`button[aria-label="Submit"]`),
 	)
 	if err != nil {
 		log.Fatal(err)
