@@ -107,6 +107,7 @@ func runPerplexity(userPrompt string) {
 		chromedp.SendKeys(`#ask-input`, userPrompt, chromedp.ByID),
 		chromedp.WaitVisible(`//button[@aria-label="Submit"]`),
 		chromedp.Click(`//button[@aria-label="Submit"]`),
+		chromedp.Click(`#ask-input`, chromedp.ByID),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -172,6 +173,7 @@ func runClaude(userPrompt string) {
 		chromedp.Click(`//div[contains(@class, "ProseMirror") and contains(@class, "break-words") and contains(@class, "max-w-[60ch")]`),
 		chromedp.SendKeys(`//div[contains(@class, "ProseMirror") and contains(@class, "break-words") and contains(@class, "max-w-[60ch]") and @contenteditable="true"]`, userPrompt),
 		chromedp.Click(`//button[@aria-label="Send message"]`),
+		chromedp.Click(`//div[contains(@class, "ProseMirror") and contains(@class, "break-words") and contains(@class, "max-w-[60ch")]`),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -234,6 +236,7 @@ func runGrok(userPrompt string) {
 		chromedp.Click(`textarea[aria-label="Ask Grok anything"]`), 
 		chromedp.SendKeys(`textarea[aria-label="Ask Grok anything"]`, userPrompt),
 		chromedp.Click(`button[aria-label="Submit"]`),
+		chromedp.Click(`textarea[aria-label="Ask Grok anything"]`), 
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -304,6 +307,7 @@ func runChatGPT(userPrompt string) {
 		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
 		chromedp.SendKeys(`#prompt-textarea`, userPrompt, chromedp.ByID),
 		chromedp.Click(`#composer-submit-button`, chromedp.ByID),
+		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
 	)
 	if err != nil {
 		log.Fatal(err)
