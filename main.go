@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"os"
+	"os/user"
 	"context"
 	"log"
 	"time"
 	"strings"
+	"fmt"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -19,9 +21,17 @@ import (
 const ctxTime = 2000
 
 func main() {
-	configFile, err := os.Open("/home/ahmed/.config/chatbang/chatbang")
+	usr, err := user.Current()
+    if err != nil {
+        fmt.Println("Error:", err)
+        return
+    }
+
 	var defaultLLM string
 	var defaultBrowser string
+	profileDir := usr.HomeDir + "/.config/chatbang/profile_data"
+
+	configFile, err := os.Open(usr.HomeDir + "/.config/chatbang/chatbang")
 
 	if err != nil {
 		defaultLLM = "ChatGPT"
@@ -90,42 +100,42 @@ func main() {
 		if (strings.HasSuffix(storedText, "!claude")) {
 			storedText = strings.TrimSuffix(storedText, "!claude")
 			storedText = strings.TrimRight(storedText, " ")
-			runClaude(storedText, defaultBrowser)
+			runClaude(storedText, defaultBrowser, profileDir)
 		} else if (strings.HasSuffix(storedText, "!chatgpt")) {
 			storedText = strings.TrimSuffix(storedText, "!chatgpt")
 			storedText = strings.TrimRight(storedText, " ")
-			runChatGPT(storedText, defaultBrowser)
+			runChatGPT(storedText, defaultBrowser, profileDir)
 		} else if (strings.HasSuffix(storedText, "!grok")) {
 			storedText = strings.TrimSuffix(storedText, "!grok")
 			storedText = strings.TrimRight(storedText, " ")
-			runGrok(storedText, defaultBrowser)
+			runGrok(storedText, defaultBrowser, profileDir)
 		} else if (strings.HasSuffix(storedText, "!p")) {
 			// p for perplexity
 			storedText = strings.TrimSuffix(storedText, "!p")
 			storedText = strings.TrimRight(storedText, " ")
-			runPerplexity(storedText, defaultBrowser)
+			runPerplexity(storedText, defaultBrowser, profileDir)
 		} else {
-			runDefault(storedText, defaultBrowser, defaultLLM)
+			runDefault(storedText, defaultBrowser, defaultLLM, profileDir)
 		}
 	}
 }
 
-func runDefault(userPrompt string, defaultBrowser string, defaultLLM string) {
+func runDefault(userPrompt string, defaultBrowser string, defaultLLM string, profileDir string) {
 	if (defaultLLM == "chatgpt") {
-		runChatGPT(userPrompt, defaultBrowser)
+		runChatGPT(userPrompt, defaultBrowser, profileDir)
 	}
 	if (defaultLLM == "claude") {
-		runClaude(userPrompt, defaultBrowser)
+		runClaude(userPrompt, defaultBrowser, profileDir)
 	}
 	if (defaultLLM == "perplexity") {
-		runPerplexity(userPrompt, defaultBrowser)
+		runPerplexity(userPrompt, defaultBrowser, profileDir)
 	}
 	if (defaultLLM == "grok") {
-		runGrok(userPrompt, defaultBrowser)
+		runGrok(userPrompt, defaultBrowser, profileDir)
 	}
 }
 
-func runPerplexity(userPrompt string, defaultBrowser string) {
+func runPerplexity(userPrompt string, defaultBrowser string, profileDir string) {
 	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
@@ -139,7 +149,7 @@ func runPerplexity(userPrompt string, defaultBrowser string) {
 			chromedp.Flag("disable-dev-shm-usage", false),
 			chromedp.Flag("disable-gpu", false),
 			chromedp.Flag("headless", false),
-			chromedp.UserDataDir("/home/ahmed/config/microsoft-edge"),
+			chromedp.UserDataDir(profileDir),
 			chromedp.Flag("profile-directory", "Default"),
 			//chromedp.Flag("profile-directory", "Profile 1"),
 		)...,
@@ -192,7 +202,7 @@ func runPerplexity(userPrompt string, defaultBrowser string) {
 	<-done
 }
 
-func runClaude(userPrompt string, defaultBrowser string) {
+func runClaude(userPrompt string, defaultBrowser string, profileDir string) {
 	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
@@ -206,7 +216,7 @@ func runClaude(userPrompt string, defaultBrowser string) {
 			chromedp.Flag("disable-dev-shm-usage", false),
 			chromedp.Flag("disable-gpu", false),
 			chromedp.Flag("headless", false),
-			chromedp.UserDataDir("/home/ahmed/config/microsoft-edge"),
+			chromedp.UserDataDir(profileDir),
 			chromedp.Flag("profile-directory", "Default"),
 			//chromedp.Flag("profile-directory", "Profile 1"),
 		)...,
@@ -255,7 +265,7 @@ func runClaude(userPrompt string, defaultBrowser string) {
 	<-done
 }
 
-func runGrok(userPrompt string, defaultBrowser string) {
+func runGrok(userPrompt string, defaultBrowser string, profileDir string) {
 	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
@@ -269,7 +279,7 @@ func runGrok(userPrompt string, defaultBrowser string) {
 			chromedp.Flag("disable-dev-shm-usage", false),
 			chromedp.Flag("disable-gpu", false),
 			chromedp.Flag("headless", false),
-			chromedp.UserDataDir("/home/ahmed/config/microsoft-edge"),
+			chromedp.UserDataDir(profileDir),
 			chromedp.Flag("profile-directory", "Default"),
 			//chromedp.Flag("profile-directory", "Profile 1"),
 		)...,
@@ -321,7 +331,7 @@ func runGrok(userPrompt string, defaultBrowser string) {
 	<-done
 }
 
-func runChatGPT(userPrompt string, defaultBrowser string) {
+func runChatGPT(userPrompt string, defaultBrowser string, profileDir string) {
 	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
@@ -335,7 +345,7 @@ func runChatGPT(userPrompt string, defaultBrowser string) {
 			chromedp.Flag("disable-dev-shm-usage", false),
 			chromedp.Flag("disable-gpu", false),
 			chromedp.Flag("headless", false),
-			chromedp.UserDataDir("/home/ahmed/config/microsoft-edge"),
+			chromedp.UserDataDir(profileDir),
 			chromedp.Flag("profile-directory", "Default"),
 			//chromedp.Flag("profile-directory", "Profile 1"),
 		)...,
