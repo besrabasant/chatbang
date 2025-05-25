@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"os"
 	"context"
 	"log"
 	"time"
@@ -14,7 +16,47 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+const ctxTime = 2000
+
 func main() {
+	configFile, err := os.Open("/home/ahmed/.config/chatbang/chatbang")
+	var defaultLLM string
+	var defaultBrowser string
+
+	if err != nil {
+		defaultLLM = "ChatGPT"
+		defaultBrowser = "chrome"
+	}
+
+	defer configFile.Close()
+
+
+	scanner := bufio.NewScanner(configFile)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		if (key == "browser") {
+			defaultBrowser = value
+		}
+
+		if (key == "llm") {
+			defaultLLM = value
+		}
+	}
+
+
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Chatbang")
 	
@@ -33,7 +75,7 @@ func main() {
 	}
 
 	content := container.NewVBox(
-		widget.NewLabel("ChatGPT"),
+		widget.NewLabel(defaultLLM),
 		textEntry,
 	)
 
@@ -48,32 +90,32 @@ func main() {
 		if (strings.HasSuffix(storedText, "!claude")) {
 			storedText = strings.TrimSuffix(storedText, "!claude")
 			storedText = strings.TrimRight(storedText, " ")
-			runClaude(storedText)
+			runClaude(storedText, defaultBrowser)
 		} else if (strings.HasSuffix(storedText, "!chatgpt")) {
 			storedText = strings.TrimSuffix(storedText, "!chatgpt")
 			storedText = strings.TrimRight(storedText, " ")
-			runChatGPT(storedText)
+			runChatGPT(storedText, defaultBrowser)
 		} else if (strings.HasSuffix(storedText, "!grok")) {
 			storedText = strings.TrimSuffix(storedText, "!grok")
 			storedText = strings.TrimRight(storedText, " ")
-			runGrok(storedText)
+			runGrok(storedText, defaultBrowser)
 		} else if (strings.HasSuffix(storedText, "!p")) {
 			// p for perplexity
 			storedText = strings.TrimSuffix(storedText, "!p")
 			storedText = strings.TrimRight(storedText, " ")
-			runPerplexity(storedText)
+			runPerplexity(storedText, defaultBrowser)
 		} else {
-			runDefault(storedText)
+			runDefault(storedText, defaultBrowser)
 		}
 	}
 }
 
-func runDefault(userPrompt string) {
-	runChatGPT(userPrompt)
+func runDefault(userPrompt string, defaultBrowser string) {
+	runChatGPT(userPrompt, defaultBrowser)
 }
 
-func runPerplexity(userPrompt string) {
-	edgePath := "/usr/bin/microsoft-edge"
+func runPerplexity(userPrompt string, defaultBrowser string) {
+	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -97,7 +139,7 @@ func runPerplexity(userPrompt string) {
 	ctx, cancel := chromedp.NewContext(allocatorCtx)
 	defer cancel()
 
-	taskCtx, taskCancel := context.WithTimeout(ctx, 200*time.Second)
+	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
 
 	err := chromedp.Run(taskCtx,
@@ -115,7 +157,7 @@ func runPerplexity(userPrompt string) {
 
 	done := make(chan bool)
 	go func() {
-		ticker := time.NewTicker(200 * time.Second)
+		ticker := time.NewTicker(ctxTime * time.Second)
 		defer ticker.Stop()
 		
 		for {
@@ -139,8 +181,8 @@ func runPerplexity(userPrompt string) {
 	<-done
 }
 
-func runClaude(userPrompt string) {
-	edgePath := "/usr/bin/microsoft-edge"
+func runClaude(userPrompt string, defaultBrowser string) {
+	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -164,7 +206,7 @@ func runClaude(userPrompt string) {
 	ctx, cancel := chromedp.NewContext(allocatorCtx)
 	defer cancel()
 
-	taskCtx, taskCancel := context.WithTimeout(ctx, 200*time.Second)
+	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
 
 	err := chromedp.Run(taskCtx,
@@ -181,7 +223,7 @@ func runClaude(userPrompt string) {
 
 	done := make(chan bool)
 	go func() {
-		ticker := time.NewTicker(200 * time.Second)
+		ticker := time.NewTicker(ctxTime * time.Second)
 		defer ticker.Stop()
 		
 		for {
@@ -202,8 +244,8 @@ func runClaude(userPrompt string) {
 	<-done
 }
 
-func runGrok(userPrompt string) {
-	edgePath := "/usr/bin/microsoft-edge"
+func runGrok(userPrompt string, defaultBrowser string) {
+	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -227,7 +269,7 @@ func runGrok(userPrompt string) {
 	ctx, cancel := chromedp.NewContext(allocatorCtx)
 	defer cancel()
 
-	taskCtx, taskCancel := context.WithTimeout(ctx, 200*time.Second)
+	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
 
 	err := chromedp.Run(taskCtx,
@@ -244,7 +286,7 @@ func runGrok(userPrompt string) {
 
 	done := make(chan bool)
 	go func() {
-		ticker := time.NewTicker(200 * time.Second)
+		ticker := time.NewTicker(ctxTime * time.Second)
 		defer ticker.Stop()
 		
 		for {
@@ -268,8 +310,8 @@ func runGrok(userPrompt string) {
 	<-done
 }
 
-func runChatGPT(userPrompt string) {
-	edgePath := "/usr/bin/microsoft-edge"
+func runChatGPT(userPrompt string, defaultBrowser string) {
+	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -298,7 +340,7 @@ func runChatGPT(userPrompt string) {
 	ctx, cancel := chromedp.NewContext(allocatorCtx)
 	defer cancel()
 
-	taskCtx, taskCancel := context.WithTimeout(ctx, 200*time.Second)
+	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
 
 	err := chromedp.Run(taskCtx,
@@ -315,7 +357,7 @@ func runChatGPT(userPrompt string) {
 
 	done := make(chan bool)
 	go func() {
-		ticker := time.NewTicker(200 * time.Second)
+		ticker := time.NewTicker(ctxTime * time.Second)
 		defer ticker.Stop()
 		
 		for {
