@@ -66,7 +66,7 @@ func main() {
 	var storedText string
 
 	textEntry := widget.NewEntry()
-	textEntry.SetPlaceHolder("Type here and press Enter...")
+	textEntry.SetPlaceHolder("Ask anything and press Enter...")
 
 	textEntry.OnSubmitted = func(text string) {
 		storedText = text
@@ -75,7 +75,7 @@ func main() {
 	}
 
 	content := container.NewVBox(
-		widget.NewLabel(defaultLLM),
+		widget.NewLabel(strings.Title(defaultLLM)),
 		textEntry,
 	)
 
@@ -105,13 +105,24 @@ func main() {
 			storedText = strings.TrimRight(storedText, " ")
 			runPerplexity(storedText, defaultBrowser)
 		} else {
-			runDefault(storedText, defaultBrowser)
+			runDefault(storedText, defaultBrowser, defaultLLM)
 		}
 	}
 }
 
-func runDefault(userPrompt string, defaultBrowser string) {
-	runChatGPT(userPrompt, defaultBrowser)
+func runDefault(userPrompt string, defaultBrowser string, defaultLLM string) {
+	if (defaultLLM == "chatgpt") {
+		runChatGPT(userPrompt, defaultBrowser)
+	}
+	if (defaultLLM == "claude") {
+		runClaude(userPrompt, defaultBrowser)
+	}
+	if (defaultLLM == "perplexity") {
+		runPerplexity(userPrompt, defaultBrowser)
+	}
+	if (defaultLLM == "grok") {
+		runGrok(userPrompt, defaultBrowser)
+	}
 }
 
 func runPerplexity(userPrompt string, defaultBrowser string) {
