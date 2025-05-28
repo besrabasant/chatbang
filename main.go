@@ -9,30 +9,122 @@ import (
 	"time"
 	"strings"
 	"fmt"
+	"image/color"
 
-	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"fyne.io/fyne/v2"
 
 	"github.com/chromedp/chromedp"
 )
 
 const ctxTime = 2000
 
+type chatbangTheme struct{}
+
+func (t chatbangTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	switch name {
+	case theme.ColorNameBackground:
+		return color.NRGBA{15, 23, 42, 255} // Dark slate background
+	case theme.ColorNameButton:
+		return color.NRGBA{59, 130, 246, 255} // Blue accent
+	case theme.ColorNameDisabledButton:
+		return color.NRGBA{71, 85, 105, 255}
+	case theme.ColorNameForeground:
+		return color.NRGBA{241, 245, 249, 255} // Light text
+	case theme.ColorNamePlaceHolder:
+		return color.NRGBA{148, 163, 184, 255} // Muted text
+	case theme.ColorNamePrimary:
+		return color.NRGBA{139, 92, 246, 255} // Purple accent
+	case theme.ColorNameHover:
+		return color.NRGBA{99, 102, 241, 255} // Indigo hover
+	case theme.ColorNameFocus:
+		return color.NRGBA{168, 85, 247, 255} // Purple focus
+	case theme.ColorNameSelection:
+		return color.NRGBA{59, 130, 246, 100} // Semi-transparent blue
+	case theme.ColorNameShadow:
+		return color.NRGBA{0, 0, 0, 50}
+	}
+	return theme.DefaultTheme().Color(name, variant)
+}
+
+func (t chatbangTheme) Font(style fyne.TextStyle) fyne.Resource {
+	return theme.DefaultTheme().Font(style)
+}
+
+func (t chatbangTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
+	return theme.DefaultTheme().Icon(name)
+}
+
+func (t chatbangTheme) Size(name fyne.ThemeSizeName) float32 {
+	switch name {
+	case theme.SizeNameText:
+		return 14
+	case theme.SizeNameCaptionText:
+		return 12
+	case theme.SizeNameHeadingText:
+		return 18
+	case theme.SizeNameSubHeadingText:
+		return 16
+	case theme.SizeNamePadding:
+		return 8
+	case theme.SizeNameInnerPadding:
+		return 6
+	case theme.SizeNameSeparatorThickness:
+		return 1
+	}
+	return theme.DefaultTheme().Size(name)
+}
+
+// Custom entry widget with rounded corners effect
+func createStyledEntry() *widget.Entry {
+	entry := widget.NewEntry()
+	entry.SetPlaceHolder("✨ Ask anything and press Enter...")
+	return entry
+}
+
+// Custom rich text widget for better output display
+func createStyledOutput(defaultLLM string) *widget.Label {
+	output := widget.NewLabel("🤖 " + strings.Title(defaultLLM) + " Ready")
+	output.Wrapping = fyne.TextWrapWord
+	return output
+}
+
+// Create animated status indicator
+func createStatusIndicator() *canvas.Circle {
+	circle := canvas.NewCircle(color.NRGBA{34, 197, 94, 255}) // Green
+	circle.Resize(fyne.NewSize(12, 12))
+	return circle
+}
+
+// Create gradient background
+func createGradientBackground() *canvas.LinearGradient {
+	gradient := canvas.NewLinearGradient(
+		color.NRGBA{15, 23, 42, 255},   // Dark slate
+		color.NRGBA{30, 41, 59, 255},   // Slightly lighter slate
+		90, // Vertical gradient
+	)
+	return gradient
+}
+
 func main() {
 	usr, err := user.Current()
-    if err != nil {
-        fmt.Println("Error:", err)
-        return
-    }
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
 	var defaultLLM string
 	var defaultBrowser string
 	profileDir := usr.HomeDir + "/.config/chatbang/profile_data"
+	//profileDir := "/home/ahmed/.config/microsoft-edge"
 
 	configFile, err := os.Open(usr.HomeDir + "/.config/chatbang/chatbang")
 
+	// TODO: if the config directory is not created, create it.
 	if err != nil {
 		defaultLLM = "ChatGPT"
 		defaultBrowser = "chrome"
@@ -66,63 +158,162 @@ func main() {
 		}
 	}
 
-
 	myApp := app.New()
-	myWindow := myApp.NewWindow("Chatbang")
+	myApp.Settings().SetTheme(&chatbangTheme{})
 	
-	myWindow.Resize(fyne.NewSize(400, 120))
-	myWindow.SetFixedSize(true)
-
-	var storedText string
-
-	textEntry := widget.NewEntry()
-	textEntry.SetPlaceHolder("Ask anything and press Enter...")
-
-	textEntry.OnSubmitted = func(text string) {
-		storedText = text
-		
-		myWindow.Close()
-	}
-
-	content := container.NewVBox(
-		widget.NewLabel(strings.Title(defaultLLM)),
-		textEntry,
+	myWindow := myApp.NewWindow("🚀 Chatbang AI")
+	myWindow.Resize(fyne.NewSize(480, 300))
+	myWindow.SetFixedSize(true) // Allow resizing for better UX
+	
+	// Create gradient background
+	gradient := createGradientBackground()
+	
+	// Create status indicator
+	statusIndicator := createStatusIndicator()
+	
+	// Create styled components
+	textEntry := createStyledEntry()
+	output := createStyledOutput(defaultLLM)
+	
+	// Create header with status
+	headerText := canvas.NewText("🚀 Chatbang AI", color.NRGBA{241, 245, 249, 255})
+	headerText.TextStyle = fyne.TextStyle{Bold: true}
+	headerText.TextSize = 20
+	headerText.Alignment = fyne.TextAlignCenter
+	
+	statusText := canvas.NewText("● Ready", color.NRGBA{34, 197, 94, 255})
+	statusText.TextSize = 12
+	statusText.Alignment = fyne.TextAlignCenter
+	
+	// Create help text
+	helpText := widget.NewLabel("💡 Commands: !claude, !chatgpt, !grok, !p (perplexity)")
+	helpText.Wrapping = fyne.TextWrapWord
+	
+	// Create styled card-like container for the input
+	inputCard := container.NewBorder(nil, nil, nil, nil, textEntry)
+	
+	// Create styled output container with scroll
+	outputScroll := container.NewScroll(output)
+	outputScroll.SetMinSize(fyne.NewSize(440, 120))
+	
+	// Create main content layout
+	header := container.NewVBox(
+		headerText,
+		statusText,
+		widget.NewSeparator(),
 	)
-
-	myWindow.SetContent(content)
-	myWindow.CenterOnScreen()
 	
+	body := container.NewVBox(
+		helpText,
+		widget.NewCard("", "", inputCard),
+		widget.NewCard("Response", "", outputScroll),
+	)
+	
+	content := container.NewBorder(header, nil, nil, nil, body)
+	
+	// Add some padding around the main content
+	paddedContent := container.NewPadded(content)
+	
+	// Stack gradient background with content
+	finalContent := container.NewStack(gradient, paddedContent)
+	
+	myWindow.SetContent(finalContent)
+	myWindow.CenterOnScreen()
 	myWindow.Canvas().Focus(textEntry)
 	
-	myWindow.ShowAndRun()
-	
-	if (len(storedText) > 0) {
-		if (strings.HasSuffix(storedText, "!claude")) {
-			storedText = strings.TrimSuffix(storedText, "!claude")
-			storedText = strings.TrimRight(storedText, " ")
-			runClaude(storedText, defaultBrowser, profileDir)
-		} else if (strings.HasSuffix(storedText, "!chatgpt")) {
-			storedText = strings.TrimSuffix(storedText, "!chatgpt")
-			storedText = strings.TrimRight(storedText, " ")
-			runChatGPT(storedText, defaultBrowser, profileDir)
-		} else if (strings.HasSuffix(storedText, "!grok")) {
-			storedText = strings.TrimSuffix(storedText, "!grok")
-			storedText = strings.TrimRight(storedText, " ")
-			runGrok(storedText, defaultBrowser, profileDir)
-		} else if (strings.HasSuffix(storedText, "!p")) {
-			// p for perplexity
-			storedText = strings.TrimSuffix(storedText, "!p")
-			storedText = strings.TrimRight(storedText, " ")
-			runPerplexity(storedText, defaultBrowser, profileDir)
+	// Animation function for status indicator
+	animateStatus := func(isProcessing bool) {
+		if isProcessing {
+			statusText.Text = "● Processing..."
+			statusText.Color = color.NRGBA{251, 191, 36, 255} // Yellow
+			statusIndicator.FillColor = color.NRGBA{251, 191, 36, 255}
 		} else {
-			runDefault(storedText, defaultBrowser, defaultLLM, profileDir)
+			statusText.Text = "● Ready"
+			statusText.Color = color.NRGBA{34, 197, 94, 255} // Green
+			statusIndicator.FillColor = color.NRGBA{34, 197, 94, 255}
 		}
+		statusText.Refresh()
+		statusIndicator.Refresh()
 	}
+	
+	// Enhanced Enter handler with animations
+	textEntry.OnSubmitted = func(text string) {
+		if strings.TrimSpace(text) == "" {
+			return
+		}
+		
+		// Start processing animation
+		animateStatus(true)
+		
+		// Show user's input in a styled way
+		userPrompt := "💬 You: " + text + "\n\n⏳ Processing..."
+		output.SetText(userPrompt)
+		output.Refresh()
+		
+		go func(prompt string) {
+			var result string
+			var emoji string
+			
+			// Add small delay for better UX
+			time.Sleep(300 * time.Millisecond)
+			
+			switch {
+			case strings.HasSuffix(prompt, "!claude"):
+				p := strings.TrimSpace(strings.TrimSuffix(prompt, "!claude"))
+				runClaude(p, defaultBrowser, profileDir)
+				result = "Claude launched successfully!"
+				emoji = "🎯"
+			case strings.HasSuffix(prompt, "!chatgpt"):
+				p := strings.TrimSpace(strings.TrimSuffix(prompt, "!chatgpt"))
+				runChatGPT(p, defaultBrowser, profileDir)
+				result = "ChatGPT launched successfully!"
+				emoji = "🤖"
+			case strings.HasSuffix(prompt, "!grok"):
+				p := strings.TrimSpace(strings.TrimSuffix(prompt, "!grok"))
+				runGrok(p, defaultBrowser, profileDir)
+				result = "Grok launched successfully!"
+				emoji = "🚀"
+			case strings.HasSuffix(prompt, "!p"):
+				p := strings.TrimSpace(strings.TrimSuffix(prompt, "!p"))
+				runPerplexity(p, defaultBrowser, profileDir)
+				result = "Perplexity launched successfully!"
+				emoji = "🔍"
+			default:
+				result = runDefault(prompt, defaultBrowser, defaultLLM, profileDir)
+				emoji = "✨"
+			}
+			
+			// Safely update UI on main thread
+			fyne.Do(func() {
+				finalResponse := "💬 You: " + prompt + "\n\n" + emoji + " Response: " + result
+				output.SetText(finalResponse)
+				output.Refresh()
+				
+				// Scroll to bottom
+				outputScroll.ScrollToBottom()
+				
+				// Stop processing animation
+				animateStatus(false)
+				
+				// Auto-resize window if needed
+				if myWindow.Content().Size().Height < 350 {
+					myWindow.Resize(fyne.NewSize(480, 350))
+				}
+			})
+		}(text)
+		
+		// Clear entry for next prompt
+		textEntry.SetText("")
+	}
+	
+	myWindow.Show()
+	myApp.Run()
 }
 
-func runDefault(userPrompt string, defaultBrowser string, defaultLLM string, profileDir string) {
+func runDefault(userPrompt string, defaultBrowser string, defaultLLM string, profileDir string) string {
+	var outputText string 
 	if (defaultLLM == "chatgpt") {
-		runChatGPT(userPrompt, defaultBrowser, profileDir)
+		outputText = runChatGPT(userPrompt, defaultBrowser, profileDir)
 	}
 	if (defaultLLM == "claude") {
 		runClaude(userPrompt, defaultBrowser, profileDir)
@@ -133,6 +324,7 @@ func runDefault(userPrompt string, defaultBrowser string, defaultLLM string, pro
 	if (defaultLLM == "grok") {
 		runGrok(userPrompt, defaultBrowser, profileDir)
 	}
+	return outputText
 }
 
 func runPerplexity(userPrompt string, defaultBrowser string, profileDir string) {
@@ -331,7 +523,7 @@ func runGrok(userPrompt string, defaultBrowser string, profileDir string) {
 	<-done
 }
 
-func runChatGPT(userPrompt string, defaultBrowser string, profileDir string) {
+func runChatGPT(userPrompt string, defaultBrowser string, profileDir string) string {
 	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
@@ -344,7 +536,7 @@ func runChatGPT(userPrompt string, defaultBrowser string, profileDir string) {
 			chromedp.Flag("disable-default-apps", false),
 			chromedp.Flag("disable-dev-shm-usage", false),
 			chromedp.Flag("disable-gpu", false),
-			chromedp.Flag("headless", false),
+			//chromedp.Flag("headless", false),
 			chromedp.UserDataDir(profileDir),
 			chromedp.Flag("profile-directory", "Default"),
 			//chromedp.Flag("profile-directory", "Profile 1"),
@@ -364,6 +556,8 @@ func runChatGPT(userPrompt string, defaultBrowser string, profileDir string) {
 	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
 
+	var text string
+
 	err := chromedp.Run(taskCtx,
 		chromedp.Navigate(`https://chatgpt.com`),
 		chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
@@ -371,33 +565,37 @@ func runChatGPT(userPrompt string, defaultBrowser string, profileDir string) {
 		chromedp.SendKeys(`#prompt-textarea`, userPrompt, chromedp.ByID),
 		chromedp.Click(`#composer-submit-button`, chromedp.ByID),
 		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
+		chromedp.WaitVisible(`div[class="markdown prose dark:prose-invert w-full break-words dark"]`, chromedp.ByQuery),
+		chromedp.Text(`div[class="markdown prose dark:prose-invert w-full break-words dark"]`, &text, chromedp.ByQuery),
 	)
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	done := make(chan bool)
-	go func() {
-		ticker := time.NewTicker(ctxTime * time.Second)
-		defer ticker.Stop()
-		
-		for {
-			select {
-			case <-ticker.C:
-				// Try to execute a simple JavaScript command to check if browser is still alive
-				err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
-				if err != nil {
-					// Browser is closed or context is invalid
-					done <- true
-					return
-				}
-			case <-ctx.Done():
-				// Context was cancelled
-				done <- true
-				return
-			}
-		}
-	}()
+	//done := make(chan bool)
+	//go func() {
+	//	ticker := time.NewTicker(ctxTime * time.Second)
+	//	defer ticker.Stop()
+	//	
+	//	for {
+	//		select {
+	//		case <-ticker.C:
+	//			// Try to execute a simple JavaScript command to check if browser is still alive
+	//			err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
+	//			if err != nil {
+	//				// Browser is closed or context is invalid
+	//				done <- true
+	//				return
+	//			}
+	//		case <-ctx.Done():
+	//			// Context was cancelled
+	//			done <- true
+	//			return
+	//		}
+	//	}
+	//}()
 
-	<-done
+	//<-done
+	return text
 }
