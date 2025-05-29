@@ -78,28 +78,30 @@ func main() {
             var res string
 
             switch {
+            case p == "!login":
+		loginProfile(defaultBrowser, profileDir)
             case p == "exit":
                 os.Exit(0)
 
             case strings.HasSuffix(p, "!claude"):
                 base := strings.TrimSpace(strings.TrimSuffix(p, "!claude"))
-				modifiedPrompt := base + " (Make an answer in less than 5 lines)."
-                runClaude(modifiedPrompt, defaultBrowser, profileDir)
+		modifiedPrompt := base + " (Make an answer in less than 5 lines)."
+                res = runClaude(modifiedPrompt, defaultBrowser, profileDir)
 
             case strings.HasSuffix(p, "!chatgpt"):
                 base := strings.TrimSpace(strings.TrimSuffix(p, "!chatgpt"))
-				modifiedPrompt := base + " (Make an answer in less than 5 lines)."
+		modifiedPrompt := base + " (Make an answer in less than 5 lines)."
                 res = runChatGPT(modifiedPrompt, defaultBrowser, profileDir)
 
             case strings.HasSuffix(p, "!grok"):
                 base := strings.TrimSpace(strings.TrimSuffix(p, "!grok"))
-				modifiedPrompt := base + " (Make an answer in less than 5 lines)."
+		modifiedPrompt := base + " (Make an answer in less than 5 lines)."
                 runGrok(modifiedPrompt, defaultBrowser, profileDir)
 
             case strings.HasSuffix(p, "!p"):
                 base := strings.TrimSpace(strings.TrimSuffix(p, "!p"))
-				modifiedPrompt := base + " (Make an answer in less than 5 lines)."
-                runPerplexity(modifiedPrompt, defaultBrowser, profileDir)
+		modifiedPrompt := base + " (Make an answer in less than 5 lines)."
+                res = runPerplexity(modifiedPrompt, defaultBrowser, profileDir)
 
             default:
 				modifiedPrompt := p + " (Make an answer in less than 5 lines)."
@@ -134,8 +136,11 @@ func runDefault(userPrompt string, defaultBrowser string, defaultLLM string, pro
 	return outputText
 }
 
-func runPerplexity(userPrompt string, defaultBrowser string, profileDir string) {
+func runPerplexity(userPrompt string, defaultBrowser string, profileDir string) string {
+	return "Perplexity is not implemented yet"
 	edgePath := defaultBrowser
+
+	userPrompt += " (Just answer with text, no images and no table)."
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -147,7 +152,7 @@ func runPerplexity(userPrompt string, defaultBrowser string, profileDir string) 
 			chromedp.Flag("disable-default-apps", false),
 			chromedp.Flag("disable-dev-shm-usage", false),
 			chromedp.Flag("disable-gpu", false),
-			chromedp.Flag("headless", false),
+			//chromedp.Flag("headless", false),
 			chromedp.UserDataDir(profileDir),
 			chromedp.Flag("profile-directory", "Default"),
 			//chromedp.Flag("profile-directory", "Profile 1"),
@@ -161,6 +166,9 @@ func runPerplexity(userPrompt string, defaultBrowser string, profileDir string) 
 
 	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
+
+	var text string
+
 
 	err := chromedp.Run(taskCtx,
 		chromedp.Navigate(`https://www.perplexity.ai/`),
@@ -170,38 +178,73 @@ func runPerplexity(userPrompt string, defaultBrowser string, profileDir string) 
 		chromedp.WaitVisible(`//button[@aria-label="Submit"]`),
 		chromedp.Click(`//button[@aria-label="Submit"]`),
 		chromedp.Click(`#ask-input`, chromedp.ByID),
+		chromedp.WaitVisible(`div[class="prose text-pretty dark:prose-invert inline leading-normal break-words min-w-0 [word-break:break-word]"]`, chromedp.ByQuery),
+		chromedp.Text(`div[class="prose text-pretty dark:prose-invert inline leading-normal break-words min-w-0 [word-break:break-word]"]`, &text, chromedp.ByQuery),
 	)
+
+	for i := 1; i <= 10000; i++ {
+		var exists bool
+		err := chromedp.Run(ctx,
+			chromedp.EvaluateAsDevTools(`
+				document.querySelector('div.prose.text-pretty') !== null
+			`, &exists),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if !exists {
+			log.Println("Div not found, breaking loop.")
+			break
+		}
+
+		// Element exists, so extract its text
+		var newText string
+		if err := chromedp.Run(ctx,
+			chromedp.Text(`div[class="prose text-pretty dark:prose-invert inline leading-normal break-words min-w-0 [word-break:break-word]"]`, &newText, chromedp.ByQuery),
+		); err != nil {
+			log.Fatal(err)
+		}
+
+		if newText == text {
+			break
+		}
+		text = newText
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	done := make(chan bool)
-	go func() {
-		ticker := time.NewTicker(ctxTime * time.Second)
-		defer ticker.Stop()
-		
-		for {
-			select {
-			case <-ticker.C:
-				// Try to execute a simple JavaScript command to check if browser is still alive
-				err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
-				if err != nil {
-					// Browser is closed or context is invalid
-					done <- true
-					return
-				}
-			case <-ctx.Done():
-				// Context was cancelled
-				done <- true
-				return
-			}
-		}
-	}()
+	//done := make(chan bool)
+	//go func() {
+	//	ticker := time.NewTicker(ctxTime * time.Second)
+	//	defer ticker.Stop()
+	//	
+	//	for {
+	//		select {
+	//		case <-ticker.C:
+	//			// Try to execute a simple JavaScript command to check if browser is still alive
+	//			err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
+	//			if err != nil {
+	//				// Browser is closed or context is invalid
+	//				done <- true
+	//				return
+	//			}
+	//		case <-ctx.Done():
+	//			// Context was cancelled
+	//			done <- true
+	//			return
+	//		}
+	//	}
+	//}()
 
-	<-done
+	//<-done
+	return text
 }
 
-func runClaude(userPrompt string, defaultBrowser string, profileDir string) {
+func runClaude(userPrompt string, defaultBrowser string, profileDir string) string {
+	return "Claude is not implemented yet"
 	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
@@ -220,7 +263,7 @@ func runClaude(userPrompt string, defaultBrowser string, profileDir string) {
 			//chromedp.Flag("profile-directory", "Profile 1"),
 		)...,
 	)
-
+	
 	defer cancel()
 
 	ctx, cancel := chromedp.NewContext(allocatorCtx)
@@ -229,6 +272,8 @@ func runClaude(userPrompt string, defaultBrowser string, profileDir string) {
 	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
 
+	var text string
+
 	err := chromedp.Run(taskCtx,
 		chromedp.Navigate(`https://claude.ai/new`),
 		chromedp.WaitVisible(`//div[contains(@class, "ProseMirror") and contains(@class, "break-words") and contains(@class, "max-w-[60ch")]`),
@@ -236,10 +281,26 @@ func runClaude(userPrompt string, defaultBrowser string, profileDir string) {
 		chromedp.SendKeys(`//div[contains(@class, "ProseMirror") and contains(@class, "break-words") and contains(@class, "max-w-[60ch]") and @contenteditable="true"]`, userPrompt),
 		chromedp.Click(`//button[@aria-label="Send message"]`),
 		chromedp.Click(`//div[contains(@class, "ProseMirror") and contains(@class, "break-words") and contains(@class, "max-w-[60ch")]`),
+		chromedp.WaitVisible(`div[class="group  relative  -tracking-[0.015em] pb-3"]`, chromedp.ByQuery),
+		chromedp.Text(`div[class="group  relative  -tracking-[0.015em] pb-3"]`, &text, chromedp.ByQuery),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	sel := `div.group.relative.-tracking-\[0\.015em\].pb-3`
+
+	for i := 1; i <= 10; i++ {
+		// grab the latest text
+		if err := chromedp.Run(taskCtx,
+			// you could also wrap this in WaitVisible if needed
+			chromedp.Text(sel, &text, chromedp.ByQuery),
+		); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(text)
+	}
+
 
 	done := make(chan bool)
 	go func() {
@@ -262,9 +323,12 @@ func runClaude(userPrompt string, defaultBrowser string, profileDir string) {
 	}()
 
 	<-done
+
+	return text
 }
 
-func runGrok(userPrompt string, defaultBrowser string, profileDir string) {
+func runGrok(userPrompt string, defaultBrowser string, profileDir string) string {
+	return "Grok is not implemented yet"
 	edgePath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
@@ -328,6 +392,7 @@ func runGrok(userPrompt string, defaultBrowser string, profileDir string) {
 	}()
 
 	<-done
+	return "Grok is not implemented yet"
 }
 
 func runChatGPT(userPrompt string, defaultBrowser string, profileDir string) string {
@@ -405,4 +470,66 @@ func runChatGPT(userPrompt string, defaultBrowser string, profileDir string) str
 
 	//<-done
 	return text
+}
+
+func loginProfile(defaultBrowser string, profileDir string) {
+	edgePath := defaultBrowser
+
+	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ExecPath(edgePath),
+			chromedp.Flag("disable-blink-features", "AutomationControlled"),
+			chromedp.Flag("exclude-switches", "enable-automation"),
+			chromedp.Flag("disable-extensions", false),
+			chromedp.UserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+			chromedp.Flag("disable-default-apps", false),
+			chromedp.Flag("disable-dev-shm-usage", false),
+			chromedp.Flag("disable-gpu", false),
+			chromedp.Flag("headless", false),
+			chromedp.UserDataDir(profileDir),
+			chromedp.Flag("profile-directory", "Default"),
+			//chromedp.Flag("profile-directory", "Profile 1"),
+		)...,
+	)
+
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocatorCtx)
+	defer cancel()
+
+	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
+	defer taskCancel()
+
+	err := chromedp.Run(taskCtx,
+		chromedp.Navigate(`https://www.chatgpt.com/`),
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	done := make(chan bool)
+	go func() {
+		ticker := time.NewTicker(ctxTime * time.Second)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ticker.C:
+				// Try to execute a simple JavaScript command to check if browser is still alive
+				err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
+				if err != nil {
+					// Browser is closed or context is invalid
+					done <- true
+					return
+				}
+			case <-ctx.Done():
+				// Context was cancelled
+				done <- true
+				return
+			}
+		}
+	}()
+
+	<-done
 }
