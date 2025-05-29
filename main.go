@@ -194,7 +194,7 @@ func main() {
 	
 	// Create styled output container with scroll
 	outputScroll := container.NewScroll(output)
-	outputScroll.SetMinSize(fyne.NewSize(440, 120))
+	outputScroll.SetMinSize(fyne.NewSize(440, 440))
 	
 	// Create main content layout
 	header := container.NewVBox(
@@ -205,8 +205,8 @@ func main() {
 	
 	body := container.NewVBox(
 		helpText,
-		widget.NewCard("", "", inputCard),
 		widget.NewCard("Response", "", outputScroll),
+		widget.NewCard("", "", inputCard),
 	)
 	
 	content := container.NewBorder(header, nil, nil, nil, body)
@@ -255,7 +255,7 @@ func main() {
 			var emoji string
 			
 			// Add small delay for better UX
-			time.Sleep(300 * time.Millisecond)
+			//time.Sleep(300 * time.Millisecond)
 			
 			switch {
 			case strings.HasSuffix(prompt, "!claude"):
