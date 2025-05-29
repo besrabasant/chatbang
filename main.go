@@ -29,11 +29,16 @@ func (t chatbangTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant
 	switch name {
 	case theme.ColorNameBackground:
 		return color.NRGBA{15, 23, 42, 255} // Dark slate background
+	case theme.ColorNameInputBackground:
+		return color.NRGBA{15, 23, 42, 255} // Dark slate background
 	case theme.ColorNameButton:
 		return color.NRGBA{59, 130, 246, 255} // Blue accent
 	case theme.ColorNameDisabledButton:
 		return color.NRGBA{71, 85, 105, 255}
 	case theme.ColorNameForeground:
+		return color.NRGBA{241, 245, 249, 255} // Light text
+		//return color.NRGBA{0, 0, 0, 50}
+	case theme.ColorNameDisabled:
 		return color.NRGBA{241, 245, 249, 255} // Light text
 	case theme.ColorNamePlaceHolder:
 		return color.NRGBA{148, 163, 184, 255} // Muted text
@@ -87,9 +92,11 @@ func createStyledEntry() *widget.Entry {
 }
 
 // Custom rich text widget for better output display
-func createStyledOutput(defaultLLM string) *widget.Label {
-	output := widget.NewLabel("🤖 " + strings.Title(defaultLLM) + " Ready")
+func createStyledOutput(defaultLLM string) *widget.Entry {
+	output := widget.NewMultiLineEntry()
+	output.SetText("🤖 " + strings.Title(defaultLLM) + " Ready")
 	output.Wrapping = fyne.TextWrapWord
+	output.Disable() // Make it read-only but still selectable
 	return output
 }
 
@@ -161,7 +168,7 @@ func main() {
 	myApp := app.New()
 	myApp.Settings().SetTheme(&chatbangTheme{})
 	
-	myWindow := myApp.NewWindow("🚀 Chatbang")
+	myWindow := myApp.NewWindow("Chatbang")
 	myWindow.Resize(fyne.NewSize(480, 300))
 	myWindow.SetFixedSize(true) // Allow resizing for better UX
 	
@@ -176,7 +183,7 @@ func main() {
 	output := createStyledOutput(defaultLLM)
 	
 	// Create header with status
-	headerText := canvas.NewText("🚀 Chatbang", color.NRGBA{241, 245, 249, 255})
+	headerText := canvas.NewText("Chatbang", color.NRGBA{241, 245, 249, 255})
 	headerText.TextStyle = fyne.TextStyle{Bold: true}
 	headerText.TextSize = 20
 	headerText.Alignment = fyne.TextAlignCenter
@@ -205,7 +212,7 @@ func main() {
 	
 	body := container.NewVBox(
 		helpText,
-		widget.NewCard("Response", "", outputScroll),
+		widget.NewCard("", "", outputScroll),
 		widget.NewCard("", "", inputCard),
 	)
 	
@@ -224,7 +231,7 @@ func main() {
 	// Animation function for status indicator
 	animateStatus := func(isProcessing bool) {
 		if isProcessing {
-			statusText.Text = "● Processing..."
+			statusText.Text = "● Thinking..."
 			statusText.Color = color.NRGBA{251, 191, 36, 255} // Yellow
 			statusIndicator.FillColor = color.NRGBA{251, 191, 36, 255}
 		} else {
@@ -246,7 +253,7 @@ func main() {
 		animateStatus(true)
 		
 		// Show user's input in a styled way
-		userPrompt := "💬 You: " + text + "\n\n⏳ Processing..."
+		userPrompt := "💬 You: " + text + "\n\n⏳ Thinking..."
 		output.SetText(userPrompt)
 		output.Refresh()
 		
@@ -285,7 +292,7 @@ func main() {
 			
 			// Safely update UI on main thread
 			fyne.Do(func() {
-				finalResponse := "💬 You: " + prompt + "\n\n" + emoji + " Response: " + result
+				finalResponse := "💬 You: " + prompt + "\n\n" + emoji + " " + result
 				output.SetText(finalResponse)
 				output.Refresh()
 				
