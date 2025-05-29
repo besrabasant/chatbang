@@ -265,6 +265,8 @@ func main() {
 			//time.Sleep(300 * time.Millisecond)
 			
 			switch {
+			case prompt == "exit":
+				os.Exit(0)
 			case strings.HasSuffix(prompt, "!claude"):
 				p := strings.TrimSpace(strings.TrimSuffix(prompt, "!claude"))
 				runClaude(p, defaultBrowser, profileDir)
