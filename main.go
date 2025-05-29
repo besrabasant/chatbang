@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"os"
+	"io"
 	"os/user"
 	"context"
 	"log"
@@ -18,25 +19,47 @@ const ctxTime = 2000
 func main() {
 	usr, err := user.Current()
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Error fetching user info:", err)
 		return
+	}
+
+	configDir := usr.HomeDir + "/.config/chatbang"
+	configPath := configDir + "/chatbang"
+	profileDir := usr.HomeDir + "/.config/chatbang/profile_data"
+
+	err = os.MkdirAll(configDir, 0o755)
+	if err != nil {
+		fmt.Println("Error creating config directory:", err)
+		return
+	}
+
+	configFile, err := os.OpenFile(configPath,
+		os.O_RDWR|os.O_CREATE, 0o644)
+	if err != nil {
+		fmt.Println("Error opening config file:", err)
+		return
+	}
+	defer configFile.Close()
+
+	info, err := configFile.Stat()
+	if err != nil {
+		fmt.Println("Error getting file info:", err)
+		return
+	}
+
+	if info.Size() == 0 {
+		defaults := "browser=/usr/bin/google-chrome\n" +
+			"llm=chatgpt\n"
+		_, err = io.WriteString(configFile, defaults)
+		if err != nil {
+			fmt.Println("Error writing default config:", err)
+			return
+		}
+		configFile.Seek(0, 0)
 	}
 
 	var defaultLLM string
 	var defaultBrowser string
-	profileDir := usr.HomeDir + "/.config/chatbang/profile_data"
-	//profileDir := "/home/ahmed/.config/microsoft-edge"
-
-	configFile, err := os.Open(usr.HomeDir + "/.config/chatbang/chatbang")
-
-	// TODO: if the config directory is not created, create it.
-	if err != nil {
-		defaultLLM = "ChatGPT"
-		defaultBrowser = "chrome"
-	}
-
-	defer configFile.Close()
-
 
 	scanner := bufio.NewScanner(configFile)
 	for scanner.Scan() {
