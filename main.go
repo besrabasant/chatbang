@@ -161,7 +161,7 @@ func main() {
 	myApp := app.New()
 	myApp.Settings().SetTheme(&chatbangTheme{})
 	
-	myWindow := myApp.NewWindow("🚀 Chatbang AI")
+	myWindow := myApp.NewWindow("🚀 Chatbang")
 	myWindow.Resize(fyne.NewSize(480, 300))
 	myWindow.SetFixedSize(true) // Allow resizing for better UX
 	
@@ -176,7 +176,7 @@ func main() {
 	output := createStyledOutput(defaultLLM)
 	
 	// Create header with status
-	headerText := canvas.NewText("🚀 Chatbang AI", color.NRGBA{241, 245, 249, 255})
+	headerText := canvas.NewText("🚀 Chatbang", color.NRGBA{241, 245, 249, 255})
 	headerText.TextStyle = fyne.TextStyle{Bold: true}
 	headerText.TextSize = 20
 	headerText.Alignment = fyne.TextAlignCenter
