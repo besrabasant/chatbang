@@ -83,22 +83,27 @@ func main() {
 
             case strings.HasSuffix(p, "!claude"):
                 base := strings.TrimSpace(strings.TrimSuffix(p, "!claude"))
-                runClaude(base, defaultBrowser, profileDir)
+				modifiedPrompt := base + " (Make an answer in less than 5 lines)."
+                runClaude(modifiedPrompt, defaultBrowser, profileDir)
 
             case strings.HasSuffix(p, "!chatgpt"):
                 base := strings.TrimSpace(strings.TrimSuffix(p, "!chatgpt"))
-                res = runChatGPT(base, defaultBrowser, profileDir)
+				modifiedPrompt := base + " (Make an answer in less than 5 lines)."
+                res = runChatGPT(modifiedPrompt, defaultBrowser, profileDir)
 
             case strings.HasSuffix(p, "!grok"):
                 base := strings.TrimSpace(strings.TrimSuffix(p, "!grok"))
-                runGrok(base, defaultBrowser, profileDir)
+				modifiedPrompt := base + " (Make an answer in less than 5 lines)."
+                runGrok(modifiedPrompt, defaultBrowser, profileDir)
 
             case strings.HasSuffix(p, "!p"):
                 base := strings.TrimSpace(strings.TrimSuffix(p, "!p"))
-                runPerplexity(base, defaultBrowser, profileDir)
+				modifiedPrompt := base + " (Make an answer in less than 5 lines)."
+                runPerplexity(modifiedPrompt, defaultBrowser, profileDir)
 
             default:
-                res = runDefault(p, defaultBrowser, defaultLLM, profileDir)
+				modifiedPrompt := p + " (Make an answer in less than 5 lines)."
+                res = runDefault(modifiedPrompt, defaultBrowser, defaultLLM, profileDir)
             }
 
             replyCh <- reply{text: res}
