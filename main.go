@@ -11,11 +11,13 @@ import (
 	"strings"
 	"fmt"
 
+	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
-	"github.com/chromedp/cdproto/cdp"
-)
 
+	markdown "github.com/MichaelMure/go-term-markdown"
+)
 const ctxTime = 2000
+// "github.com/chromedp/cdproto/cdp"
 
 func main() {
 	usr, err := user.Current()
@@ -191,6 +193,7 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 	//outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
 	//outputDiv := `div.markdown.prose.dark\:prose-invert.w-full.break-words.dark.markdown-new-styling`
 	outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
+	buttonDiv := `button[data-testid="copy-turn-action-button"]`
 
 	err := chromedp.Run(taskCtx,
 		chromedp.Navigate(`https://chatgpt.com`),
@@ -202,6 +205,9 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 
 	modifiedPrompt := firstPrompt + " (Make an answer in less than 5 lines)."
 	var text string
+	var copiedText string
+
+	js := `new Promise((resolve, reject) => { window.navigator.clipboard.readText() .then(text => resolve(text)) .catch(err => reject(err)); });`
 
 	err = chromedp.Run(taskCtx,
 		chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
@@ -212,13 +218,34 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 
 		chromedp.WaitVisible(outputDiv, chromedp.ByQuery),
 		chromedp.Text(outputDiv, &text, chromedp.ByQuery),
+
+		chromedp.Sleep(1*time.Second),
+		chromedp.WaitVisible(buttonDiv, chromedp.ByQuery),
+		//chromedp.Sleep(500*time.Millisecond),
+		//chromedp.Click(buttonDiv, chromedp.ByQuery),
+		chromedp.Evaluate(fmt.Sprintf(`
+			(() => {
+			    let buttons = document.querySelectorAll('%s');
+			    if (buttons.length > 0) {
+				buttons[buttons.length - 1].click();
+			    }
+			})()
+		    `, buttonDiv), nil),
+
+		chromedp.Sleep(1*time.Second),
+		// Read clipboard
+		chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
+		return p.WithAwaitPromise(true)
+		}),
 	)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-    	fmt.Printf("%s\n\n", text)
+	result := markdown.Render(string(copiedText), 80, 2)
+	fmt.Println(string(result))
+
 	fmt.Print("> ")
     	promptScanner := bufio.NewScanner(os.Stdin)
     	for promptScanner.Scan() {
@@ -238,30 +265,88 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 
     	    		chromedp.WaitVisible(outputDiv, chromedp.ByQueryAll),
     	    		chromedp.Text(outputDiv, &res, chromedp.ByQueryAll),
+
+			chromedp.WaitVisible(buttonDiv, chromedp.ByQuery),
+			//chromedp.Sleep(500*time.Millisecond),
+			//chromedp.Click(buttonDiv, chromedp.ByQuery),
+
+			chromedp.Sleep(3*time.Second),
+			chromedp.Evaluate(fmt.Sprintf(`
+				(() => {
+				   setTimeout(() => {
+				    }, 2000);
+				    let buttons = document.querySelectorAll('%s');
+				    if (buttons.length > 0) {
+					buttons[buttons.length - 1].click();
+				    }
+				})()
+			    `, buttonDiv), nil),
+
+			chromedp.Sleep(1*time.Second),
+			// Read clipboard
+			chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
+			return p.WithAwaitPromise(true)
+			}),
+
     	    	)
 
     	    	if err != nil {
     	    		log.Fatal(err)
     	    	}
 
-    	    	var nodes []*cdp.Node
-    	    	err = chromedp.Run(taskCtx,
-    	    	    chromedp.Nodes(outputDiv, &nodes, chromedp.ByQueryAll),
-    	    	)
+		result = markdown.Render(string(copiedText), 80, 2)
 
-    	    	if err != nil {
-    	    	    log.Fatal(err)
-    	    	}
+		for  {
+			if copiedText != modifiedPrompt {
+				break
+			}
+			// because it's sometimes doesn't see the very last copy button
+			// so it copies the prompt instead
 
-    	    	if len(nodes) > 0 {
-    	    		    lastNode := nodes[len(nodes)-1]
-    	    		    selector := lastNode.FullXPath()
-    	    		    res, err = waitForStableText(ctx, selector, 20*time.Second)
-    	    		    if err != nil {
-    	    			log.Println("Warning:", err)
-    	    		    }
-    	    		    fmt.Printf("%s\n\n", res)
-    	    	}
+			err = chromedp.Run(taskCtx,
+				chromedp.Evaluate(fmt.Sprintf(`
+					(() => {
+					   setTimeout(() => {
+					    }, 2000);
+					    let buttons = document.querySelectorAll('%s');
+					    if (buttons.length > 0) {
+						buttons[buttons.length - 1].click();
+					    }
+					})()
+				    `, buttonDiv), nil),
+
+				chromedp.Sleep(1*time.Second),
+				// Read clipboard
+				chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
+				return p.WithAwaitPromise(true)
+				}),
+			)
+			result = markdown.Render(string(copiedText), 80, 2)
+		}
+
+		fmt.Println(string(result))
+
+
+    	    	//var nodes []*cdp.Node
+    	    	//err = chromedp.Run(taskCtx,
+    	    	//    chromedp.Nodes(outputDiv, &nodes, chromedp.ByQueryAll),
+    	    	//)
+
+    	    	//if err != nil {
+    	    	//    log.Fatal(err)
+    	    	//}
+
+    	    	//if len(nodes) > 0 {
+    	    	//	    lastNode := nodes[len(nodes)-1]
+    	    	//	    selector := lastNode.FullXPath()
+    	    	//	    res, err = waitForStableText(ctx, selector, 20*time.Second)
+    	    	//	    if err != nil {
+    	    	//		log.Println("Warning:", err)
+    	    	//	    }
+		//	    result := markdown.Render(string(res), 80, 6)
+
+    	    	//	    fmt.Printf("%s\n\n", res)
+    	    	//}
 
     	    	fmt.Print("> ")
     	}
