@@ -152,11 +152,11 @@ func waitForStableText(ctx context.Context, sel string, timeout time.Duration) (
 }
 
 func runChatGPT(defaultBrowser string, profileDir string) {
-	edgePath := defaultBrowser
+	browserPath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
-			chromedp.ExecPath(edgePath),
+			chromedp.ExecPath(browserPath),
 			chromedp.Flag("disable-blink-features", "AutomationControlled"),
 			chromedp.Flag("exclude-switches", "enable-automation"),
 			chromedp.Flag("disable-extensions", false),
@@ -183,13 +183,15 @@ func runChatGPT(defaultBrowser string, profileDir string) {
 	//outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
 	outputDiv := `div.markdown.prose.dark\:prose-invert.w-full.break-words.dark.markdown-new-styling`
 
-	err := chromedp.Run(taskCtx,
-		chromedp.Navigate(`https://chatgpt.com`),
-	)
+	go func() {
+		err := chromedp.Run(taskCtx,
+			chromedp.Navigate(`https://chatgpt.com`),
+		)
 
-	if err != nil {
-		log.Fatal(err)
-	}
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
     fmt.Print("> ")
     promptScanner := bufio.NewScanner(os.Stdin)
@@ -237,11 +239,11 @@ func runChatGPT(defaultBrowser string, profileDir string) {
 }
 
 func loginProfile(defaultBrowser string, profileDir string) {
-	edgePath := defaultBrowser
+	browserPath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
-			chromedp.ExecPath(edgePath),
+			chromedp.ExecPath(browserPath),
 			chromedp.Flag("disable-blink-features", "AutomationControlled"),
 			chromedp.Flag("exclude-switches", "enable-automation"),
 			chromedp.Flag("disable-extensions", false),
