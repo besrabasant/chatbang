@@ -51,8 +51,7 @@ func main() {
 	}
 
 	if info.Size() == 0 {
-		defaults := "browser=/usr/bin/google-chrome\n" +
-			"llm=chatgpt\n"
+		defaults := "browser=/usr/bin/google-chrome\n"
 		_, err = io.WriteString(configFile, defaults)
 		if err != nil {
 			fmt.Println("Error writing default config:", err)
