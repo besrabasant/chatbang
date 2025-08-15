@@ -162,6 +162,7 @@ func waitForStableText(ctx context.Context, sel string, timeout time.Duration) (
 
 func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 	browserPath := defaultBrowser
+	fmt.Printf("[Thinking...]\n\n")
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -217,7 +218,7 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 		log.Fatal(err)
 	}
 
-	fmt.Println(text)
+    	fmt.Printf("%s\n\n", text)
 	fmt.Print("> ")
     	promptScanner := bufio.NewScanner(os.Stdin)
     	for promptScanner.Scan() {
@@ -225,6 +226,8 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
     	    	prompt := promptScanner.Text()
     	    	modifiedPrompt = prompt + " (Make an answer in less than 5 lines)."
     	    	//fmt.Printf("Prompt: %s\n\n", modifiedPrompt)
+
+		fmt.Printf("[Thinking...]\n\n")
 
     	    	err := chromedp.Run(taskCtx,
     	    		chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
