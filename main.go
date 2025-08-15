@@ -115,7 +115,16 @@ func main() {
     //    fmt.Print("> ")
     //}
 
-	runChatGPT(defaultBrowser, profileDir)
+	fmt.Print("> ")
+	promptScanner := bufio.NewScanner(os.Stdin)
+	promptScanner.Scan()
+	firstPrompt := promptScanner.Text()
+
+	if firstPrompt == "!login" {
+		loginProfile(defaultBrowser, profileDir)
+	} else {
+		runChatGPT(defaultBrowser, profileDir, firstPrompt)
+	}
 }
 
 func waitForStableText(ctx context.Context, sel string, timeout time.Duration) (string, error) {
@@ -151,7 +160,7 @@ func waitForStableText(ctx context.Context, sel string, timeout time.Duration) (
     }
 }
 
-func runChatGPT(defaultBrowser string, profileDir string) {
+func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 	browserPath := defaultBrowser
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
@@ -178,64 +187,81 @@ func runChatGPT(defaultBrowser string, profileDir string) {
 	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
 
+	//outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
+	//outputDiv := `div.markdown.prose.dark\:prose-invert.w-full.break-words.dark.markdown-new-styling`
+	outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
+
+	err := chromedp.Run(taskCtx,
+		chromedp.Navigate(`https://chatgpt.com`),
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	modifiedPrompt := firstPrompt + " (Make an answer in less than 5 lines)."
 	var text string
 
-	//outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
-	outputDiv := `div.markdown.prose.dark\:prose-invert.w-full.break-words.dark.markdown-new-styling`
+	err = chromedp.Run(taskCtx,
+		chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
+		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
+		chromedp.SendKeys(`#prompt-textarea`, modifiedPrompt, chromedp.ByID),
+		chromedp.Click(`#composer-submit-button`, chromedp.ByID),
+		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
 
-	go func() {
-		err := chromedp.Run(taskCtx,
-			chromedp.Navigate(`https://chatgpt.com`),
-		)
+		chromedp.WaitVisible(outputDiv, chromedp.ByQuery),
+		chromedp.Text(outputDiv, &text, chromedp.ByQuery),
+	)
 
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-    fmt.Print("> ")
-    promptScanner := bufio.NewScanner(os.Stdin)
-    for promptScanner.Scan() {
-		prompt := promptScanner.Text()
-		modifiedPrompt := prompt + " (Make an answer in less than 5 lines)."
-		//fmt.Printf("Prompt: %s\n\n", modifiedPrompt)
-
-		err := chromedp.Run(taskCtx,
-			chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
-			chromedp.Click(`#prompt-textarea`, chromedp.ByID),
-			chromedp.SendKeys(`#prompt-textarea`, modifiedPrompt, chromedp.ByID),
-			chromedp.Click(`#composer-submit-button`, chromedp.ByID),
-			chromedp.Click(`#prompt-textarea`, chromedp.ByID),
-
-			chromedp.WaitVisible(outputDiv, chromedp.ByQueryAll),
-			chromedp.Text(outputDiv, &text, chromedp.ByQueryAll),
-		)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		var nodes []*cdp.Node
-		err = chromedp.Run(taskCtx,
-		    chromedp.Nodes(outputDiv, &nodes, chromedp.ByQueryAll),
-		)
-
-		if err != nil {
-		    log.Fatal(err)
-		}
-
-		if len(nodes) > 0 {
-			    lastNode := nodes[len(nodes)-1]
-			    selector := lastNode.FullXPath()
-			    ress, err := waitForStableText(ctx, selector, 20*time.Second)
-			    if err != nil {
-				log.Println("Warning:", err)
-			    }
-			    fmt.Printf("%s\n\n", ress)
-		}
-
-		fmt.Print("> ")
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	fmt.Println(text)
+	fmt.Print("> ")
+    	promptScanner := bufio.NewScanner(os.Stdin)
+    	for promptScanner.Scan() {
+		var res string
+    	    	prompt := promptScanner.Text()
+    	    	modifiedPrompt = prompt + " (Make an answer in less than 5 lines)."
+    	    	//fmt.Printf("Prompt: %s\n\n", modifiedPrompt)
+
+    	    	err := chromedp.Run(taskCtx,
+    	    		chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
+    	    		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
+    	    		chromedp.SendKeys(`#prompt-textarea`, modifiedPrompt, chromedp.ByID),
+    	    		chromedp.Click(`#composer-submit-button`, chromedp.ByID),
+    	    		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
+
+    	    		chromedp.WaitVisible(outputDiv, chromedp.ByQueryAll),
+    	    		chromedp.Text(outputDiv, &res, chromedp.ByQueryAll),
+    	    	)
+
+    	    	if err != nil {
+    	    		log.Fatal(err)
+    	    	}
+
+    	    	var nodes []*cdp.Node
+    	    	err = chromedp.Run(taskCtx,
+    	    	    chromedp.Nodes(outputDiv, &nodes, chromedp.ByQueryAll),
+    	    	)
+
+    	    	if err != nil {
+    	    	    log.Fatal(err)
+    	    	}
+
+    	    	if len(nodes) > 0 {
+    	    		    lastNode := nodes[len(nodes)-1]
+    	    		    selector := lastNode.FullXPath()
+    	    		    res, err = waitForStableText(ctx, selector, 20*time.Second)
+    	    		    if err != nil {
+    	    			log.Println("Warning:", err)
+    	    		    }
+    	    		    fmt.Printf("%s\n\n", res)
+    	    	}
+
+    	    	fmt.Print("> ")
+    	}
 }
 
 func loginProfile(defaultBrowser string, profileDir string) {
