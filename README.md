@@ -1,6 +1,9 @@
 # Chatbang
 
 `Chatbang` is a simple tool to access ChatGPT from the terminal, without needing for an API key.
+
+![Chatbang](./assets/chatbang.png)
+
 ## Installation
 
 On Linux:
