@@ -121,7 +121,7 @@ func main() {
 	promptScanner.Scan()
 	firstPrompt := promptScanner.Text()
 
-	if firstPrompt == "!login" {
+	if firstPrompt == "!config" {
 		loginProfile(defaultBrowser, profileDir)
 	} else {
 		runChatGPT(defaultBrowser, profileDir, firstPrompt)
