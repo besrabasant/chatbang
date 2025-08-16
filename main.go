@@ -83,49 +83,64 @@ func main() {
 		}
 	}
 
-    //promptScanner := bufio.NewScanner(os.Stdin)
-    //fmt.Print("> ")
-    //for promptScanner.Scan() {
-    //    prompt := promptScanner.Text()
+	if len(os.Args) > 1 {
+		if os.Args[1] == "--config" {
+			loginProfile(defaultBrowser, profileDir)
+			return
+		}
 
-    //    // a channel to get back result
-    //    type reply struct {
-    //        text  string
-    //    }
-    //    replyCh := make(chan reply)
+		if os.Args[1] == "--help" || os.Args[1] == "-h" {
+			fmt.Println("Not Implemented")
+			return
+		}
+	}
 
-    //    go func(p string) {
-    //        var res string
-    //        switch {
-    //        case p == "!login":
-    //            loginProfile(defaultBrowser, profileDir)
-    //        case p == "exit":
-    //            os.Exit(0)
-    //        default:
-    //            modifiedPrompt := p + " (Make an answer in less than 5 lines)."
-    //            res = runDefault(modifiedPrompt, defaultBrowser, defaultLLM, profileDir)
-    //        }
+	fmt.Print("> ") // first prompt
 
-    //        replyCh <- reply{text: res}
-    //    }(prompt)
+	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
+		append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ExecPath(defaultBrowser),
+			chromedp.Flag("disable-blink-features", "AutomationControlled"),
+			chromedp.Flag("exclude-switches", "enable-automation"),
+			chromedp.Flag("disable-extensions", false),
+			chromedp.UserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+			chromedp.Flag("disable-default-apps", false),
+			chromedp.Flag("disable-dev-shm-usage", false),
+			chromedp.Flag("disable-gpu", false),
+			//chromedp.Flag("headless", false),
+			chromedp.UserDataDir(profileDir),
+			chromedp.Flag("profile-directory", "Default"),
+		)...,
+	)
 
-    //    // wait for it and then print
-    //    r := <-replyCh
-    //    fmt.Printf("%s\n\n", r.text)
+	defer cancel()
 
-    //    fmt.Print("> ")
-    //}
+	ctx, cancel := chromedp.NewContext(allocatorCtx)
+	defer cancel()
 
-	fmt.Print("> ")
+	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
+	defer taskCancel()
+
+	err = chromedp.Run(taskCtx,
+		chromedp.Navigate(`https://chatgpt.com`),
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+
 	promptScanner := bufio.NewScanner(os.Stdin)
 	promptScanner.Scan()
 	firstPrompt := promptScanner.Text()
 
-	if firstPrompt == "!config" {
-		loginProfile(defaultBrowser, profileDir)
-	} else {
-		runChatGPT(defaultBrowser, profileDir, firstPrompt)
-	}
+	//if firstPrompt == "!config" {
+	//	loginProfile(defaultBrowser, profileDir)
+	//} else {
+	//	runChatGPT(defaultBrowser, profileDir, firstPrompt)
+	//}
+
+	runChatGPT(taskCtx, defaultBrowser, profileDir, firstPrompt)
 }
 
 func waitForStableText(ctx context.Context, sel string, timeout time.Duration) (string, error) {
@@ -161,44 +176,10 @@ func waitForStableText(ctx context.Context, sel string, timeout time.Duration) (
     }
 }
 
-func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
-	browserPath := defaultBrowser
+func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, firstPrompt string) {
 	fmt.Printf("[Thinking...]\n\n")
 
-	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:],
-			chromedp.ExecPath(browserPath),
-			chromedp.Flag("disable-blink-features", "AutomationControlled"),
-			chromedp.Flag("exclude-switches", "enable-automation"),
-			chromedp.Flag("disable-extensions", false),
-			chromedp.UserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
-			chromedp.Flag("disable-default-apps", false),
-			chromedp.Flag("disable-dev-shm-usage", false),
-			chromedp.Flag("disable-gpu", false),
-			//chromedp.Flag("headless", false),
-			chromedp.UserDataDir(profileDir),
-			chromedp.Flag("profile-directory", "Default"),
-		)...,
-	)
-
-	defer cancel()
-
-	ctx, cancel := chromedp.NewContext(allocatorCtx)
-	defer cancel()
-
-	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
-	defer taskCancel()
-
-	//outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
 	buttonDiv := `button[data-testid="copy-turn-action-button"]`
-
-	err := chromedp.Run(taskCtx,
-		chromedp.Navigate(`https://chatgpt.com`),
-	)
-
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	modifiedPrompt := firstPrompt + " (Make an answer in less than 5 lines)."
 	var copiedText string
@@ -206,7 +187,7 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 
 	js := `new Promise((resolve, reject) => { window.navigator.clipboard.readText() .then(text => resolve(text)) .catch(err => reject(err)); });`
 
-	err = chromedp.Run(taskCtx,
+	err := chromedp.Run(taskCtx,
 		chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
 		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
 		chromedp.SendKeys(`#prompt-textarea`, modifiedPrompt, chromedp.ByID),
@@ -217,14 +198,14 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 		//chromedp.Text(outputDiv, &text, chromedp.ByQuery),
 	)
 
-	for  {
+	for {
 		if copiedText != modifiedPrompt && len(copiedText) > 0 {
 			break
 		}
 		// because it's sometimes doesn't see the very last copy button
 		// so it copies the prompt instead
 		err = chromedp.Run(taskCtx,
-			chromedp.Sleep(1*time.Second),
+			//chromedp.Sleep(1*time.Second),
 			chromedp.WaitVisible(buttonDiv, chromedp.ByQuery),
 
 			/////////chromedp.Sleep(500*time.Millisecond),
