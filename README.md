@@ -19,7 +19,6 @@ Install from source:
 ```bash
 git clone git@github.com:ahmedhosssam/chatbang.git
 cd chatbang
-go mod init chatbang
 go mod tidy
 go build main.go
 sudo mv main /usr/bin/chatbang
