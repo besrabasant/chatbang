@@ -35,14 +35,16 @@ chatbang
 
 ## Configuration
 
-`Chatbang` requires a Chromium-based browser (e.g. Chrome, Edge, Brave) to work, so you need to have one. And then make sure that it points to the right path to your chosen browser in the default config path for `Chatbang`: `$HOME/.config/chatbang/chatbang`.
+Note: You need to execute `chatbang --config` at least once to create the config file in the directory `$HOME/.config/chatbang`.
+
+`Chatbang` requires a Chromium-based browser (e.g. Chrome, Edge, Brave) to work, so you need to have one installed. And then make sure that the config file points to the right path of your chosen browser in the default config path for `Chatbang`: `$HOME/.config/chatbang/chatbang`.
 
 It's default is:
 ```
 browser=/usr/bin/google-chrome
 ```
 
-Change it to your favorite Chromium-based browser.
+Change it to the right path of your favorite Chromium-based browser.
 
 You also need to log in to ChatGPT in `Chatbang`'s Chromium session, so you need to do:
 ```bash
@@ -54,4 +56,4 @@ Then, you will need to allow the clipboard permission for ChatGPT's website (on 
 
 ## How it works?
 
-`Chatbang` works by scraping ChatGPT's website. It opens ChatGPT when you execute `Chatbang` and take your prompt and paste it in ChatGPT's prompt area and execute that prompt, then it waits for the response and take it as a markdown format and then render it in the terminal.
+`Chatbang` works by scraping ChatGPT's website. It opens ChatGPT on a headless session when you execute `Chatbang` and take your prompt and paste it in ChatGPT's prompt area and execute that prompt, then it waits for the response and copies it as a markdown format and then render it in the terminal.
