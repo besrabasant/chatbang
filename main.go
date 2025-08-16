@@ -190,8 +190,6 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 	defer taskCancel()
 
 	//outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
-	//outputDiv := `div.markdown.prose.dark\:prose-invert.w-full.break-words.dark.markdown-new-styling`
-	outputDiv := `div[class="markdown prose dark:prose-invert w-full break-words dark markdown-new-styling"]`
 	buttonDiv := `button[data-testid="copy-turn-action-button"]`
 
 	err := chromedp.Run(taskCtx,
@@ -203,8 +201,8 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 	}
 
 	modifiedPrompt := firstPrompt + " (Make an answer in less than 5 lines)."
-	var text string
 	var copiedText string
+	result := markdown.Render(string(modifiedPrompt), 80, 2)
 
 	js := `new Promise((resolve, reject) => { window.navigator.clipboard.readText() .then(text => resolve(text)) .catch(err => reject(err)); });`
 
@@ -215,43 +213,59 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 		chromedp.Click(`#composer-submit-button`, chromedp.ByID),
 		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
 
-		chromedp.WaitVisible(outputDiv, chromedp.ByQuery),
-		chromedp.Text(outputDiv, &text, chromedp.ByQuery),
-
-		chromedp.Sleep(1*time.Second),
-		chromedp.WaitVisible(buttonDiv, chromedp.ByQuery),
-		//chromedp.Sleep(500*time.Millisecond),
-		//chromedp.Click(buttonDiv, chromedp.ByQuery),
-		chromedp.Evaluate(fmt.Sprintf(`
-			(() => {
-			    let buttons = document.querySelectorAll('%s');
-			    if (buttons.length > 0) {
-				buttons[buttons.length - 1].click();
-			    }
-			})()
-		    `, buttonDiv), nil),
-
-		chromedp.Sleep(1*time.Second),
-		// Read clipboard
-		chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
-		return p.WithAwaitPromise(true)
-		}),
+		//chromedp.WaitVisible(outputDiv, chromedp.ByQuery),
+		//chromedp.Text(outputDiv, &text, chromedp.ByQuery),
 	)
+
+	for  {
+		if copiedText != modifiedPrompt && len(copiedText) > 0 {
+			break
+		}
+		// because it's sometimes doesn't see the very last copy button
+		// so it copies the prompt instead
+		err = chromedp.Run(taskCtx,
+			chromedp.Sleep(1*time.Second),
+			chromedp.WaitVisible(buttonDiv, chromedp.ByQuery),
+
+			/////////chromedp.Sleep(500*time.Millisecond),
+			/////////chromedp.Click(buttonDiv, chromedp.ByQuery),
+
+			chromedp.Evaluate(fmt.Sprintf(`
+				(() => {
+				    let buttons = document.querySelectorAll('%s');
+				    if (buttons.length > 0) {
+					buttons[buttons.length - 1].click();
+				    }
+				})()
+			    `, buttonDiv), nil),
+
+			//chromedp.Sleep(1*time.Second),
+			// Read clipboard
+			chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
+			return p.WithAwaitPromise(true)
+			}),
+		)
+
+
+		result = markdown.Render(string(copiedText), 80, 2)
+	}
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	result := markdown.Render(string(copiedText), 80, 2)
 	fmt.Println(string(result))
 
 	fmt.Print("> ")
     	promptScanner := bufio.NewScanner(os.Stdin)
     	for promptScanner.Scan() {
-		var res string
     	    	prompt := promptScanner.Text()
     	    	modifiedPrompt = prompt + " (Make an answer in less than 5 lines)."
-    	    	//fmt.Printf("Prompt: %s\n\n", modifiedPrompt)
+		if len(prompt) == 0 {
+			fmt.Print("> ")
+			continue
+		}
+    	    	//fmt.Printf("Prompt: %s\n\n", prompt)
 
 		fmt.Printf("[Thinking...]\n\n")
 
@@ -261,33 +275,7 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
     	    		chromedp.SendKeys(`#prompt-textarea`, modifiedPrompt, chromedp.ByID),
     	    		chromedp.Click(`#composer-submit-button`, chromedp.ByID),
     	    		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
-
-    	    		chromedp.WaitVisible(outputDiv, chromedp.ByQueryAll),
-    	    		chromedp.Text(outputDiv, &res, chromedp.ByQueryAll),
-
-			chromedp.WaitVisible(buttonDiv, chromedp.ByQuery),
-			//chromedp.Sleep(500*time.Millisecond),
-			//chromedp.Click(buttonDiv, chromedp.ByQuery),
-
-			chromedp.Sleep(3*time.Second),
-			chromedp.Evaluate(fmt.Sprintf(`
-				(() => {
-				   setTimeout(() => {
-				    }, 2000);
-				    let buttons = document.querySelectorAll('%s');
-				    if (buttons.length > 0) {
-					buttons[buttons.length - 1].click();
-				    }
-				})()
-			    `, buttonDiv), nil),
-
-			chromedp.Sleep(1*time.Second),
-			// Read clipboard
-			chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
-			return p.WithAwaitPromise(true)
-			}),
-
-    	    	)
+		)
 
     	    	if err != nil {
     	    		log.Fatal(err)
@@ -295,18 +283,21 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 
 		result = markdown.Render(string(copiedText), 80, 2)
 
+		copiedText = ""
+
 		for  {
-			if copiedText != modifiedPrompt {
+			if copiedText != modifiedPrompt && len(copiedText) > 0 {
 				break
 			}
 			// because it's sometimes doesn't see the very last copy button
 			// so it copies the prompt instead
 
 			err = chromedp.Run(taskCtx,
+				chromedp.Sleep(3*time.Second),
+				//chromedp.WaitVisible(outputDiv, chromedp.ByQuery),
+
 				chromedp.Evaluate(fmt.Sprintf(`
 					(() => {
-					   setTimeout(() => {
-					    }, 2000);
 					    let buttons = document.querySelectorAll('%s');
 					    if (buttons.length > 0) {
 						buttons[buttons.length - 1].click();
@@ -320,6 +311,7 @@ func runChatGPT(defaultBrowser string, profileDir string, firstPrompt string) {
 				return p.WithAwaitPromise(true)
 				}),
 			)
+
 			result = markdown.Render(string(copiedText), 80, 2)
 		}
 
