@@ -17,7 +17,6 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 const ctxTime = 2000
-// "github.com/chromedp/cdproto/cdp"
 
 func main() {
 	usr, err := user.Current()
@@ -167,9 +166,6 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 		chromedp.SendKeys(`#prompt-textarea`, modifiedPrompt, chromedp.ByID),
 		chromedp.Click(`#composer-submit-button`, chromedp.ByID),
 		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
-
-		//chromedp.WaitVisible(outputDiv, chromedp.ByQuery),
-		//chromedp.Text(outputDiv, &text, chromedp.ByQuery),
 	)
 
 	for {
@@ -182,9 +178,6 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 			//chromedp.Sleep(1*time.Second),
 			chromedp.WaitVisible(buttonDiv, chromedp.ByQuery),
 
-			/////////chromedp.Sleep(500*time.Millisecond),
-			/////////chromedp.Click(buttonDiv, chromedp.ByQuery),
-
 			chromedp.Evaluate(fmt.Sprintf(`
 				(() => {
 				    let buttons = document.querySelectorAll('%s');
@@ -194,7 +187,6 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 				})()
 			    `, buttonDiv), nil),
 
-			//chromedp.Sleep(1*time.Second),
 			// Read clipboard
 			chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
 			return p.WithAwaitPromise(true)
@@ -220,7 +212,6 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 			fmt.Print("> ")
 			continue
 		}
-    	    	//fmt.Printf("Prompt: %s\n\n", prompt)
 
 		fmt.Printf("[Thinking...]\n\n")
 
@@ -249,8 +240,6 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 
 			err = chromedp.Run(taskCtx,
 				chromedp.Sleep(3*time.Second),
-				//chromedp.WaitVisible(outputDiv, chromedp.ByQuery),
-
 				chromedp.Evaluate(fmt.Sprintf(`
 					(() => {
 					    let buttons = document.querySelectorAll('%s');
@@ -292,7 +281,6 @@ func loginProfile(defaultBrowser string, profileDir string) {
 			chromedp.Flag("headless", false),
 			chromedp.UserDataDir(profileDir),
 			chromedp.Flag("profile-directory", "Default"),
-			//chromedp.Flag("profile-directory", "Profile 1"),
 		)...,
 	)
 
@@ -320,15 +308,12 @@ func loginProfile(defaultBrowser string, profileDir string) {
 		for {
 			select {
 			case <-ticker.C:
-				// Try to execute a simple JavaScript command to check if browser is still alive
 				err := chromedp.Run(ctx, chromedp.Evaluate(`document.readyState`, nil))
 				if err != nil {
-					// Browser is closed or context is invalid
 					done <- true
 					return
 				}
 			case <-ctx.Done():
-				// Context was cancelled
 				done <- true
 				return
 			}
