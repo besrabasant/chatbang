@@ -138,49 +138,16 @@ func main() {
 
 
 	promptScanner := bufio.NewScanner(os.Stdin)
-	promptScanner.Scan()
-	firstPrompt := promptScanner.Text()
 
-	//if firstPrompt == "!config" {
-	//	loginProfile(defaultBrowser, profileDir)
-	//} else {
-	//	runChatGPT(defaultBrowser, profileDir, firstPrompt)
-	//}
+	for promptScanner.Scan() {
+		firstPrompt := promptScanner.Text()
+		if len(firstPrompt) > 0 {
+			runChatGPT(taskCtx, defaultBrowser, profileDir, firstPrompt)
+			return
+		}
 
-	runChatGPT(taskCtx, defaultBrowser, profileDir, firstPrompt)
-}
-
-func waitForStableText(ctx context.Context, sel string, timeout time.Duration) (string, error) {
-    var lastText string
-    stableCount := 0
-    start := time.Now()
-
-    for {
-        var currentText string
-        err := chromedp.Run(ctx,
-            chromedp.Text(sel, &currentText, chromedp.NodeVisible),
-        )
-        if err != nil {
-            return "", err
-        }
-
-        if currentText == lastText && len(lastText) > 0 {
-            stableCount++
-        } else {
-            stableCount = 0
-        }
-
-        if stableCount >= 3 {
-            return currentText, nil
-        }
-
-        if time.Since(start) > timeout {
-			fmt.Println("gg")
-        }
-
-        lastText = currentText
-        time.Sleep(500 * time.Millisecond) // check every 0.5s
-    }
+		fmt.Print("> ")
+	}
 }
 
 func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, firstPrompt string) {
@@ -304,28 +271,6 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 		}
 
 		fmt.Println(string(result))
-
-
-    	    	//var nodes []*cdp.Node
-    	    	//err = chromedp.Run(taskCtx,
-    	    	//    chromedp.Nodes(outputDiv, &nodes, chromedp.ByQueryAll),
-    	    	//)
-
-    	    	//if err != nil {
-    	    	//    log.Fatal(err)
-    	    	//}
-
-    	    	//if len(nodes) > 0 {
-    	    	//	    lastNode := nodes[len(nodes)-1]
-    	    	//	    selector := lastNode.FullXPath()
-    	    	//	    res, err = waitForStableText(ctx, selector, 20*time.Second)
-    	    	//	    if err != nil {
-    	    	//		log.Println("Warning:", err)
-    	    	//	    }
-		//	    result := markdown.Render(string(res), 80, 6)
-
-    	    	//	    fmt.Printf("%s\n\n", res)
-    	    	//}
 
     	    	fmt.Print("> ")
     	}
