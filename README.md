@@ -1,6 +1,6 @@
 # Chatbang
 
-`Chatbang` is a simple tool to access ChatGPT from the terminal.
+`Chatbang` is a simple tool to access ChatGPT from the terminal, without needing for an API key.
 ## Installation
 
 On Linux:
@@ -16,6 +16,8 @@ Install from source:
 ```bash
 git clone git@github.com:ahmedhosssam/chatbang.git
 cd chatbang
+go mod init chatbang
+go mod tidy
 go build main.go
 sudo mv main /usr/bin/chatbang
 ```
@@ -38,3 +40,15 @@ browser=/usr/bin/google-chrome
 ```
 
 Change it to your favorite Chromium-based browser.
+
+You also need to log in to ChatGPT in `Chatbang`'s Chromium session, so you need to do:
+```bash
+chatbang --config
+```
+That will open `Chatbang`'s Chromium session on ChatGPT's website, log in with your account.
+
+Then, you will need to allow the clipboard permission for ChatGPT's website (on the same session).
+
+## How it works?
+
+`Chatbang` works by scraping ChatGPT's website. It opens ChatGPT when you execute `Chatbang` and take your prompt and paste it in ChatGPT's prompt area and execute that prompt, then it waits for the response and take it as a markdown format and then render it in the terminal.
