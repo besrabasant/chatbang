@@ -45,7 +45,9 @@ browser=/usr/bin/google-chrome
 
 Change it to the right path of your favorite Chromium-based browser.
 
-You also need to log in to ChatGPT in `Chatbang`'s Chromium session, so you need to do:
+Note: `Chatbang` doesn't work when the browser is installed with `Snap`, the only option right now is to install it in `/bin` or `/usr/bin`.
+
+Then, you need to log in to ChatGPT in `Chatbang`'s Chromium session, so you need to do:
 ```bash
 chatbang --config
 ```
