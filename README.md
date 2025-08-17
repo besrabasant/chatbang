@@ -9,7 +9,7 @@
 On Linux:
 
 ```bash
-curl -L https://github.com/ahmedhosssam/chatbang/releases/download/v0.0.1/myprogram -o chatbang
+curl -L https://github.com/ahmedhosssam/chatbang/releases/download/v0.1.0/chatbang -o chatbang
 chmod +x chatbang
 sudo mv chatbang /usr/bin/chatbang
 ```
