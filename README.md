@@ -24,14 +24,6 @@ go build main.go
 sudo mv main /usr/bin/chatbang
 ```
 
-
-## Usage
-
-It's very simple, just type `chatbang` in the terminal.
-```bash
-chatbang
-```
-
 ## Configuration
 
 Note: You need to execute `chatbang --config` at least once to create the config file in the directory `$HOME/.config/chatbang`.
@@ -54,6 +46,13 @@ chatbang --config
 That will open `Chatbang`'s Chromium session on ChatGPT's website, log in with your account.
 
 Then, you will need to allow the clipboard permission for ChatGPT's website (on the same session).
+
+## Usage
+
+It's very simple, just type `chatbang` in the terminal.
+```bash
+chatbang
+```
 
 ## How it works?
 
