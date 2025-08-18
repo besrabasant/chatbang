@@ -56,4 +56,4 @@ chatbang
 
 ## How it works?
 
-`Chatbang` works by scraping ChatGPT's website. It opens ChatGPT on a headless session when you execute `Chatbang` and take your prompt and paste it in ChatGPT's prompt area and execute that prompt, then it waits for the response and copies it as a markdown format and then render it in the terminal.
+Read that article: [https://ahmedhosssam.github.io/posts/chatbang/](https://ahmedhosssam.github.io/posts/chatbang/)
