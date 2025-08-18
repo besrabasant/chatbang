@@ -294,8 +294,9 @@ func loginProfile(defaultBrowser string, profileDir string) {
 
 	err := chromedp.Run(taskCtx,
 		chromedp.Navigate(`https://www.chatgpt.com/`),
+		chromedp.Evaluate(`alert("Please allow clipboard access in the popup that will appear now.");`, nil),
+		chromedp.Evaluate(`navigator.clipboard.readText().catch(() => {})`, nil),
 	)
-
 	if err != nil {
 		log.Fatal(err)
 	}
