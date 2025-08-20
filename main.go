@@ -267,13 +267,6 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 
 func loginProfile(defaultBrowser string, profileDir string) {
 	browserPath := defaultBrowser
-	
-	permissionFlagPath := profileDir + "/clipboard_permission_granted"
-	
-	permissionAlreadyGranted := false
-	if _, err := os.Stat(permissionFlagPath); err == nil {
-		permissionAlreadyGranted = true
-	}
 
 	allocatorCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -299,41 +292,27 @@ func loginProfile(defaultBrowser string, profileDir string) {
 	taskCtx, taskCancel := context.WithTimeout(ctx, ctxTime*time.Second)
 	defer taskCancel()
 
-	// First navigate to ChatGPT
 	err := chromedp.Run(taskCtx,
 		chromedp.Navigate(`https://www.chatgpt.com/`),
+		chromedp.Evaluate(`(async () => {
+			const permName = 'clipboard-read';
+			try {
+				const p = await navigator.permissions.query({ name: permName });
+				if (p.state !== 'granted') {
+					alert("Please allow clipboard access in the popup that will appear now.");
+				}
+			} catch (e) {
+				try {
+					await navigator.clipboard.readText();
+				} catch (_) {
+					alert("Please allow clipboard access in the popup that will appear now.");
+				}
+			}
+		})();`, nil),
+		chromedp.Evaluate(`navigator.clipboard.readText().catch(() => {});`, nil),
 	)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	// Only show permission alert if we haven't already granted permission
-	if !permissionAlreadyGranted {
-		err = chromedp.Run(taskCtx,
-			chromedp.Evaluate(`alert("Please allow clipboard access in the popup that will appear now.");`, nil),
-			chromedp.Evaluate(`
-				navigator.clipboard.readText()
-					.then(() => {
-						console.log("Clipboard permission granted");
-						return true;
-					})
-					.catch(() => {
-						console.log("Clipboard permission denied");
-						return false;
-					});
-			`, nil),
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-		
-		// Create the permission flag file to remember that we've already requested permission
-		flagFile, err := os.Create(permissionFlagPath)
-		if err != nil {
-			log.Printf("Warning: Could not create permission flag file: %v", err)
-		} else {
-			flagFile.Close()
-		}
 	}
 
 	done := make(chan bool)
