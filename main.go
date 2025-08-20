@@ -2,20 +2,21 @@ package main
 
 import (
 	"bufio"
-	"os"
-	"io"
-	"os/user"
 	"context"
-	"log"
-	"time"
-	"strings"
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/user"
+	"strings"
+	"time"
 
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
+
 const ctxTime = 2000
 
 func main() {
@@ -77,7 +78,7 @@ func main() {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 
-		if (key == "browser") {
+		if key == "browser" {
 			defaultBrowser = value
 		}
 	}
@@ -135,7 +136,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-
 	promptScanner := bufio.NewScanner(os.Stdin)
 
 	for promptScanner.Scan() {
@@ -189,10 +189,9 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 
 			// Read clipboard
 			chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
-			return p.WithAwaitPromise(true)
+				return p.WithAwaitPromise(true)
 			}),
 		)
-
 
 		result = markdown.Render(string(copiedText), 80, 2)
 	}
@@ -204,10 +203,10 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 	fmt.Println(string(result))
 
 	fmt.Print("> ")
-    	promptScanner := bufio.NewScanner(os.Stdin)
-    	for promptScanner.Scan() {
-    	    	prompt := promptScanner.Text()
-    	    	modifiedPrompt = prompt + " (Make an answer in less than 5 lines)."
+	promptScanner := bufio.NewScanner(os.Stdin)
+	for promptScanner.Scan() {
+		prompt := promptScanner.Text()
+		modifiedPrompt = prompt + " (Make an answer in less than 5 lines)."
 		if len(prompt) == 0 {
 			fmt.Print("> ")
 			continue
@@ -215,23 +214,23 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 
 		fmt.Printf("[Thinking...]\n\n")
 
-    	    	err := chromedp.Run(taskCtx,
-    	    		chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
-    	    		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
-    	    		chromedp.SendKeys(`#prompt-textarea`, modifiedPrompt, chromedp.ByID),
-    	    		chromedp.Click(`#composer-submit-button`, chromedp.ByID),
-    	    		chromedp.Click(`#prompt-textarea`, chromedp.ByID),
+		err := chromedp.Run(taskCtx,
+			chromedp.WaitVisible(`#prompt-textarea`, chromedp.ByID),
+			chromedp.Click(`#prompt-textarea`, chromedp.ByID),
+			chromedp.SendKeys(`#prompt-textarea`, modifiedPrompt, chromedp.ByID),
+			chromedp.Click(`#composer-submit-button`, chromedp.ByID),
+			chromedp.Click(`#prompt-textarea`, chromedp.ByID),
 		)
 
-    	    	if err != nil {
-    	    		log.Fatal(err)
-    	    	}
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		result = markdown.Render(string(copiedText), 80, 2)
 
 		copiedText = ""
 
-		for  {
+		for {
 			if copiedText != modifiedPrompt && len(copiedText) > 0 {
 				break
 			}
@@ -252,7 +251,7 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 				chromedp.Sleep(1*time.Second),
 				// Read clipboard
 				chromedp.Evaluate(js, &copiedText, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
-				return p.WithAwaitPromise(true)
+					return p.WithAwaitPromise(true)
 				}),
 			)
 
@@ -261,8 +260,8 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 
 		fmt.Println(string(result))
 
-    	    	fmt.Print("> ")
-    	}
+		fmt.Print("> ")
+	}
 }
 
 func loginProfile(defaultBrowser string, profileDir string) {
@@ -294,6 +293,22 @@ func loginProfile(defaultBrowser string, profileDir string) {
 
 	err := chromedp.Run(taskCtx,
 		chromedp.Navigate(`https://www.chatgpt.com/`),
+		chromedp.Evaluate(`(async () => {
+			const permName = 'clipboard-read';
+			try {
+				const p = await navigator.permissions.query({ name: permName });
+				if (p.state !== 'granted') {
+					alert("Please allow clipboard access in the popup that will appear now.");
+				}
+			} catch (e) {
+				try {
+					await navigator.clipboard.readText();
+				} catch (_) {
+					alert("Please allow clipboard access in the popup that will appear now.");
+				}
+			}
+		})();`, nil),
+		chromedp.Evaluate(`navigator.clipboard.readText().catch(() => {});`, nil),
 	)
 
 	if err != nil {
@@ -304,7 +319,7 @@ func loginProfile(defaultBrowser string, profileDir string) {
 	go func() {
 		ticker := time.NewTicker(ctxTime * time.Second)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ticker.C:
