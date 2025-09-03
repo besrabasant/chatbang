@@ -1,0 +1,10 @@
+# Enable one or more MCP providers. Minimal TOML supported.
+
+[[mcp.servers]]
+name = "fs-local"
+provider = "fs"
+roots = ["./", "/some/other/path"]
+max_bytes = 1048576
+include_hidden = false
+allow_binary = false
+
