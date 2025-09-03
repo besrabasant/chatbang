@@ -51,7 +51,7 @@ func main() {
 	}
 
 	if info.Size() == 0 {
-		defaults := "browser=/usr/bin/google-chrome\n"
+		defaults := "browser=/usr/bin/google-chrome-stable\n"
 		_, err = io.WriteString(configFile, defaults)
 		if err != nil {
 			fmt.Println("Error writing default config:", err)
@@ -114,7 +114,7 @@ func main() {
 			chromedp.Flag("disable-default-apps", false),
 			chromedp.Flag("disable-dev-shm-usage", false),
 			chromedp.Flag("disable-gpu", false),
-			//chromedp.Flag("headless", false),
+			chromedp.Flag("headless", false),
 			chromedp.UserDataDir(profileDir),
 			chromedp.Flag("profile-directory", "Default"),
 		)...,
@@ -154,7 +154,7 @@ func runChatGPT(taskCtx context.Context, browserPath string, profileDir string, 
 
 	buttonDiv := `button[data-testid="copy-turn-action-button"]`
 
-	modifiedPrompt := firstPrompt + " (Make an answer in less than 5 lines)."
+	modifiedPrompt := firstPrompt + ""
 	var copiedText string
 	result := markdown.Render(string(modifiedPrompt), 80, 2)
 
