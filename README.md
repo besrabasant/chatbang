@@ -49,6 +49,33 @@ chatbang login
 ```
 This opens ChatGPT in the managed profile and prompts for clipboard permission. For backward compatibility, `chatbang --config` does the same.
 
+## MCP Configuration
+
+Chatbang can read local files and directories using pluggable MCP servers. Configuration lives at `~/.config/chatbang/mcp.toml`.
+
+- Create a minimal config (with commented options):
+  ```bash
+  chatbang mcp init
+  # or customize
+  chatbang mcp init --name fs-local --root . --root ./internal --force
+  ```
+  This writes `~/.config/chatbang/mcp.toml`. Use `--root` multiple times to add roots; `--force` overwrites existing files.
+
+- Example generated config (you can edit/uncomment as needed):
+  ```toml
+  [[mcp.servers]]
+  # name = "fs-local"
+  provider = "fs"
+  roots = ["./"]
+  # max_bytes = 1048576
+  # include_hidden = false
+  # allow_binary = false
+  ```
+
+- Multiple servers: Add more `[[mcp.servers]]` blocks if you register additional providers.
+
+With MCP enabled, use the in‑chat commands below to attach files or explore directories.
+
 ## Usage
 
 It's very simple, just type `chatbang` in the terminal.
@@ -76,6 +103,7 @@ Build and development (Makefile):
 - make tidy | fmt | vet | test | clean
 
 Debug logging
+- Start from the sample: `cp .env.sample .env`
 - Create a `.env` file in the project or your working directory with:
   - `DEBUG=true` to enable debug logs, or set `LOG_LEVEL=debug|info|warn|error|trace`.
   - Example:
@@ -84,6 +112,18 @@ Debug logging
     LOG_LEVEL=debug
     ```
   Chatbang uses logrus for structured logging and loads `.env` via `joho/godotenv`.
+  - Optional: write logs to a file with `LOG_FILE` (path can use `~`):
+    ```
+    LOG_FILE=~/.config/chatbang/chatbang.log
+    ```
+
+## Troubleshooting
+
+- MCP not loading: Enable debug logs and check `~/.config/chatbang/mcp.toml`. Run `chatbang mcp init` to create it; verify `roots` exist and are readable.
+- Clipboard blocked: Run `chatbang login` and allow clipboard permission in the browser prompt. Ensure the session uses the Chatbang profile.
+- Browser path invalid: Edit `~/.config/chatbang/chatbang` and set `browser=/path/to/chrome`. Verify with `which google-chrome-stable` or `chromium`.
+- No GUI session: Chatbang requires a graphical environment. If on SSH/WSL/CI, use an X server or run locally.
+- Still stuck: Set `DEBUG=true` in `.env` and re-run to see detailed logs. Consider switching log format to JSON if ingesting elsewhere.
 
 ## How it works?
 
